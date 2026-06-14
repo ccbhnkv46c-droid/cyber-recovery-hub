@@ -17,10 +17,12 @@ npm run dev
 
 ```bash
 npm install
-DATABASE_URL="file:./prisma/dev.db" npx prisma db push --schema=prisma/schema.sqlite.prisma
-DATABASE_URL="file:./prisma/dev.db" npm run db:seed
+cp .env.example .env   # ensure DATABASE_URL="file:./prisma/dev.db"
+npm run db:setup:sqlite
 npm run dev
 ```
+
+Prisma auto-selects `prisma/schema.sqlite.prisma` when `DATABASE_URL` starts with `file:`.
 
 Open [http://localhost:3000](http://localhost:3000) — you will be redirected to the login screen before accessing the application.
 
