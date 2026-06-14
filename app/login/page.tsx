@@ -7,6 +7,7 @@ import { Shield, LogIn, User, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { getDefaultRoute } from '@/lib/rbac';
 import { toast } from '@/lib/toast';
+import { buildApiPath, parseJsonResponse } from '@/lib/urls';
 
 const DEMO_USERS = [
   { email: 'administrator@crh.bank.com', role: 'Administrator', name: 'Administrator', password: 'AdminCrh2025!' },
@@ -29,7 +30,10 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/auth/sso-status').then((r) => r.json()).then((d) => setEntraEnabled(d.entraEnabled)).catch(() => {});
+    fetch(buildApiPath('/auth/sso-status'))
+      .then((r) => parseJsonResponse<{ entraEnabled: boolean }>(r))
+      .then((d) => setEntraEnabled(d.entraEnabled))
+      .catch(() => {});
   }, []);
 
   const handleLogin = async (loginEmail?: string, loginPassword?: string) => {
@@ -40,18 +44,25 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(buildApiPath('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: e, password: p }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse<{
+        token: string;
+        user: { id: string; email: string; name: string; role: string; teamId?: string; department?: string };
+        defaultRoute?: string;
+        error?: string;
+      }>(res);
+
       if (!res.ok) throw new Error(data.error || 'Login failed');
+
       setAuth(data.token, data.user);
-      // Confirm role from server (prevents stale localStorage)
-      const me = await fetch('/api/auth/me', {
+      const me = await fetch(buildApiPath('/auth/me'), {
         headers: { Authorization: `Bearer ${data.token}` },
-      }).then((r) => r.json());
+      }).then((r) => parseJsonResponse<{ role?: string }>(r));
+
       if (me?.role) setAuth(data.token, { ...data.user, ...me });
       toast(`Welcome back, ${data.user.name} (${me?.role || data.user.role})`, 'success');
       router.push(data.defaultRoute || getDefaultRoute(me?.role || data.user.role));

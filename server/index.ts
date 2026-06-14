@@ -110,6 +110,8 @@ if (config.isProduction) {
 const server = app.listen(config.apiPort, config.apiHost, () => {
   console.log(`Cyber Recovery Hub API v1.2.0 on http://${config.apiHost}:${config.apiPort}`);
   console.log(`  App URL: ${config.appUrl}`);
+  console.log(`  API rewrite target: ${config.apiRewriteUrl}`);
+  console.log(`  CORS origins: ${config.corsOrigins.join(', ')}`);
   console.log(`  SSO: ${config.entra.enabled ? 'Entra ID enabled' : 'Dev auth only'}`);
   console.log(`  Queue: ${config.redisUrl ? 'Redis/BullMQ' : 'In-process'}`);
   console.log(`  Copilot: ${config.copilot.openaiApiKey ? 'LLM + grounded' : 'Analytics engine'}`);

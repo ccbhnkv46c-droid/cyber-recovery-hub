@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { buildApiPath, parseJsonResponse } from '@/lib/urls';
 
 interface User {
   id: string;
@@ -69,17 +70,19 @@ export async function apiFetch<T = unknown>(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  useDebugStore.getState().setLastApiCall(`/api${path}`, options.method || 'GET');
+  useDebugStore.getState().setLastApiCall(buildApiPath(path), options.method || 'GET');
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  const res = await fetch(buildApiPath(path), { ...options, headers });
   if (res.status === 401) {
     useAuthStore.getState().logout();
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    const err = await parseJsonResponse<{ error?: string }>(res).catch((e) => ({
+      error: e instanceof Error ? e.message : 'Request failed',
+    }));
     throw new Error(err.error || 'Request failed');
   }
-  return res.json();
+  return parseJsonResponse<T>(res);
 }

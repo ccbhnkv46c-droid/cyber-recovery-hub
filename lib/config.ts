@@ -1,12 +1,14 @@
 import 'dotenv/config';
+import {
+  resolveAppUrl,
+  resolveCorsOrigins,
+  resolveApiRewriteUrl,
+  validateProductionUrls,
+} from './urls.cjs';
 
-function firstOrigin(value: string): string {
-  return value.split(',')[0]?.trim() || 'http://localhost:3000';
-}
-
-const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const appUrl = resolveAppUrl();
 const apiPort = parseInt(process.env.API_PORT || '3001', 10);
-const apiUrl = process.env.API_URL || `http://127.0.0.1:${apiPort}`;
+const apiRewriteUrl = resolveApiRewriteUrl();
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -14,12 +16,15 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
 
   appUrl,
-  apiUrl,
+  /** Public/external API URL if explicitly configured */
+  apiUrl: process.env.API_URL?.trim() || `http://127.0.0.1:${apiPort}`,
+  /** Internal target used by Next.js /api rewrites */
+  apiRewriteUrl,
   apiPort,
   apiHost: process.env.API_HOST || '0.0.0.0',
   webPort: parseInt(process.env.PORT || '3000', 10),
   trustProxy: process.env.TRUST_PROXY !== 'false',
-  corsOrigins: (process.env.CORS_ORIGINS || appUrl).split(',').map((o) => o.trim()),
+  corsOrigins: resolveCorsOrigins(),
 
   databaseUrl: process.env.DATABASE_URL || '',
 
@@ -31,8 +36,7 @@ export const config = {
     tenantId: process.env.ENTRA_TENANT_ID || '',
     clientId: process.env.ENTRA_CLIENT_ID || '',
     clientSecret: process.env.ENTRA_CLIENT_SECRET || '',
-    redirectUri:
-      process.env.ENTRA_REDIRECT_URI || `${firstOrigin(process.env.CORS_ORIGINS || appUrl)}/api/auth/entra/callback`,
+    redirectUri: process.env.ENTRA_REDIRECT_URI || `${appUrl.replace(/\/$/, '')}/api/auth/entra/callback`,
     defaultRole: process.env.ENTRA_DEFAULT_ROLE || 'ENGINEER',
   },
 
@@ -73,14 +77,13 @@ export function validateProductionConfig(): string[] {
   const warnings: string[] = [];
   if (!config.isProduction) return warnings;
 
+  const { warnings: urlWarnings, errors: urlErrors } = validateProductionUrls();
+  warnings.push(...urlWarnings, ...urlErrors);
+
   if (!config.databaseUrl) {
     warnings.push('DATABASE_URL is required in production (use PostgreSQL).');
   } else if (config.databaseUrl.startsWith('file:')) {
     warnings.push('SQLite (file:...) is not supported in hosted environments — use PostgreSQL.');
-  }
-
-  if (!config.corsOrigins.length || config.corsOrigins[0].includes('localhost')) {
-    warnings.push('Set CORS_ORIGINS and APP_URL to your public application URL.');
   }
 
   if (!config.entra.enabled) {
