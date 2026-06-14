@@ -23,8 +23,11 @@ export async function initJobQueue() {
   if (config.redisUrl) {
     try {
       const { Queue, Worker } = await import('bullmq');
-      const { default: IORedis } = await import('ioredis');
-      const connection = new IORedis(config.redisUrl, { maxRetriesPerRequest: null });
+
+      const connection = {
+        url: config.redisUrl,
+        maxRetriesPerRequest: null,
+      };
 
       const bullQueue = new Queue('crh-jobs', { connection });
 
@@ -39,7 +42,7 @@ export async function initJobQueue() {
 
       queue = {
         add: async (name) => { await bullQueue.add(name, {}); },
-        close: async () => { await bullQueue.close(); await connection.quit(); },
+        close: async () => { await bullQueue.close(); },
       };
 
       console.log('[Jobs] BullMQ queue connected via Redis');

@@ -304,7 +304,7 @@ router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => 
     updateData.progress = 100;
   }
   if (data.ownerId && data.ownerId !== existing.ownerId) {
-    updateData.assignedById = user.id;
+    updateData.assignedBy = { connect: { id: user.id } };
     updateData.assignedAt = new Date();
   }
   if (data.requestException) {

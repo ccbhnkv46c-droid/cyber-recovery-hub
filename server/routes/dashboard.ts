@@ -299,15 +299,17 @@ router.get('/engineer-portal', authMiddleware, async (req: AuthRequest, res: Res
 
   const baseWhere = { ownerId: userId, status: { in: ACTIVE_STATUSES } };
 
+  const portalInclude = {
+    application: { select: { name: true } },
+    team: { select: { name: true } },
+    service: { select: { id: true, name: true } },
+    assignedBy: { select: { name: true } },
+  };
+
   const [myFindings, overdue, dueThisWeek, blocked, critical, high, recentlyUpdated] = await Promise.all([
     prisma.finding.findMany({
       where: baseWhere,
-      include: {
-        application: { select: { name: true } },
-        team: { select: { name: true } },
-        service: { select: { id: true, name: true } },
-        assignedBy: { select: { name: true } },
-      },
+      include: portalInclude,
       orderBy: { targetDate: 'asc' },
     }),
     prisma.finding.count({
@@ -327,13 +329,13 @@ router.get('/engineer-portal', authMiddleware, async (req: AuthRequest, res: Res
     }),
     prisma.finding.findMany({
       where: { ownerId: userId, status: { in: ACTIVE_STATUSES }, updatedAt: { gte: weekAgo } },
-      include: { service: { select: { name: true } } },
+      include: portalInclude,
       orderBy: { updatedAt: 'desc' },
       take: 10,
     }),
   ]);
 
-  const enrich = (f: typeof myFindings[0]) => ({
+  const enrich = <T extends { targetDate: Date }>(f: T) => ({
     ...f,
     daysRemaining: getDaysRemaining(f.targetDate),
     slaStatus: getDaysRemaining(f.targetDate) < 0 ? 'overdue'
