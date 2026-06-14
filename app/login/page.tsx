@@ -7,7 +7,7 @@ import { Shield, LogIn, User, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { getDefaultRoute } from '@/lib/rbac';
 import { toast } from '@/lib/toast';
-import { buildApiPath, parseJsonResponse } from '@/lib/urls';
+import { apiPath, logApiCall, parseJsonResponse, safeAppRoute } from '@/lib/api-client';
 
 const DEMO_USERS = [
   { email: 'administrator@crh.bank.com', role: 'Administrator', name: 'Administrator', password: 'AdminCrh2025!' },
@@ -30,7 +30,9 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch(buildApiPath('/auth/sso-status'))
+    const endpoint = apiPath('/auth/sso-status');
+    logApiCall('GET', '/auth/sso-status');
+    fetch(endpoint)
       .then((r) => parseJsonResponse<{ entraEnabled: boolean }>(r))
       .then((d) => setEntraEnabled(d.entraEnabled))
       .catch(() => {});
@@ -43,8 +45,11 @@ export default function LoginPage() {
 
     setLoading(true);
     setError('');
+    const loginEndpoint = apiPath('/auth/login');
+    logApiCall('POST', '/auth/login');
+
     try {
-      const res = await fetch(buildApiPath('/auth/login'), {
+      const res = await fetch(loginEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: e, password: p }),
@@ -59,13 +64,18 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || 'Login failed');
 
       setAuth(data.token, data.user);
-      const me = await fetch(buildApiPath('/auth/me'), {
+
+      const meEndpoint = apiPath('/auth/me');
+      logApiCall('GET', '/auth/me');
+      const me = await fetch(meEndpoint, {
         headers: { Authorization: `Bearer ${data.token}` },
       }).then((r) => parseJsonResponse<{ role?: string }>(r));
 
       if (me?.role) setAuth(data.token, { ...data.user, ...me });
       toast(`Welcome back, ${data.user.name} (${me?.role || data.user.role})`, 'success');
-      router.push(data.defaultRoute || getDefaultRoute(me?.role || data.user.role));
+      router.push(
+        safeAppRoute(data.defaultRoute, getDefaultRoute(me?.role || data.user.role))
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Login failed';
       setError(msg);

@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { buildApiPath, parseJsonResponse } from '@/lib/urls';
+import { apiPath, logApiCall, parseJsonResponse } from '@/lib/api-client';
 
 interface User {
   id: string;
@@ -70,9 +70,11 @@ export async function apiFetch<T = unknown>(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  useDebugStore.getState().setLastApiCall(buildApiPath(path), options.method || 'GET');
+  const url = apiPath(path);
+  logApiCall(options.method || 'GET', path);
+  useDebugStore.getState().setLastApiCall(url, options.method || 'GET');
 
-  const res = await fetch(buildApiPath(path), { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
   if (res.status === 401) {
     useAuthStore.getState().logout();
     window.location.href = '/login';

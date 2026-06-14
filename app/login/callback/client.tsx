@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { LoadingSpinner } from '@/components/ui';
-import { buildApiPath, parseJsonResponse } from '@/lib/urls';
+import { apiPath, logApiCall, parseJsonResponse, safeAppRoute } from '@/lib/api-client';
 
 export default function LoginCallbackClient() {
   const searchParams = useSearchParams();
@@ -13,10 +13,11 @@ export default function LoginCallbackClient() {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    const route = searchParams.get('route') || '/dashboard';
+    const route = safeAppRoute(searchParams.get('route'), '/dashboard');
 
     if (token) {
-      fetch(buildApiPath('/auth/me'), { headers: { Authorization: `Bearer ${token}` } })
+      logApiCall('GET', '/auth/me');
+      fetch(apiPath('/auth/me'), { headers: { Authorization: `Bearer ${token}` } })
         .then((r) => parseJsonResponse<{
           id: string; email: string; name: string; role: string;
           teamId?: string; department?: string;
