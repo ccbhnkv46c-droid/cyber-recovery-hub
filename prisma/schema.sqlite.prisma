@@ -1,0 +1,285 @@
+// Local development only — SQLite is not suitable for Vercel or Azure App Service.
+// Usage: npx prisma db push --schema=prisma/schema.sqlite.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  name            String
+  passwordHash    String?
+  entraId         String?   @unique
+  authProvider    String    @default("local")
+  role            String
+  department      String?
+  teamId          String?
+  team            Team?     @relation(fields: [teamId], references: [id])
+  managerId       String?
+  manager         User?     @relation("UserManager", fields: [managerId], references: [id])
+  directReports   User[]    @relation("UserManager")
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  ownedFindings         Finding[]   @relation("FindingOwner")
+  assignedFindings      Finding[]   @relation("AssignedBy")
+  businessOwnedFindings Finding[]   @relation("BusinessOwner")
+  managedFindings       Finding[]   @relation("FindingManager")
+  comments              Comment[]
+  activities            Activity[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  sessions              Session[]
+  attachments           Attachment[]
+  evidence              Evidence[]
+  importBatches         ImportBatch[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id           String    @id @default(uuid())
+  name         String
+  businessArea String
+  leaderId     String?
+  members      User[]
+  findings     Finding[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Service {
+  id           String    @id @default(uuid())
+  name         String    @unique
+  description  String?
+  owner        String?
+  criticality  String    @default("MEDIUM")
+  businessArea String?
+  isActive     Boolean   @default(true)
+  findings     Finding[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Application {
+  id              String    @id @default(uuid())
+  name            String
+  businessService String
+  ownerId         String?
+  managerId       String?
+  technologyStack String
+  cloudPlatform   String?
+  cmdbId          String?
+  environment     String    @default("PRODUCTION")
+  businessArea    String
+  findings        Finding[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Finding {
+  id                String   @id @default(uuid())
+  findingId         String   @unique
+  title             String
+  description       String
+  businessImpact    String   @default("")
+  technicalImpact   String   @default("")
+  severity          String
+  cvssScore         Float
+  exploitability    Float    @default(0)
+  likelihood        Float    @default(0)
+  mitigation        String?
+  remediationPlan   String?
+  status            String   @default("OPEN")
+  escalationLevel   String   @default("NONE")
+  priority          String   @default("MEDIUM")
+  progress          Int      @default(0)
+
+  technicalRisk     Float    @default(0)
+  businessRisk      Float    @default(0)
+  exposure          Float    @default(0)
+  criticality       Float    @default(0)
+  recoveryScore     Float    @default(0)
+  riskLevel         String   @default("Medium")
+
+  serviceId         String
+  service           Service  @relation(fields: [serviceId], references: [id])
+  applicationId     String?
+  application       Application? @relation(fields: [applicationId], references: [id])
+  businessService   String?
+  technology        String?
+  asset             String?
+  businessArea      String?
+
+  ownerId           String?
+  owner             User?    @relation("FindingOwner", fields: [ownerId], references: [id])
+  assignedById      String?
+  assignedBy        User?    @relation("AssignedBy", fields: [assignedById], references: [id])
+  assignedAt        DateTime?
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id])
+  managerId         String?
+  manager           User?    @relation("FindingManager", fields: [managerId], references: [id])
+  businessOwnerId   String?
+  businessOwner     User?    @relation("BusinessOwner", fields: [businessOwnerId], references: [id])
+
+  slaDays           Int      @default(30)
+  dateIdentified    DateTime @default(now())
+  targetDate        DateTime
+  plannedCompletionDate DateTime?
+  actualCompletionDate  DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  closedAt          DateTime?
+  nextAction        String?
+  nextSteps         String?
+  nextActionDate    DateTime?
+
+  riskAccepted      Boolean  @default(false)
+  riskAcceptedAt    DateTime?
+  riskAcceptedBy    String?
+  exceptionExpiry   DateTime?
+  exceptionReason   String?
+
+  blockerReason     String?
+  blockerSince      DateTime?
+
+  lastReminderAt    DateTime?
+  lastEscalationAt  DateTime?
+  importBatchId     String?
+  importBatch       ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  comments          Comment[]
+  activities        Activity[]
+  attachments       Attachment[]
+  evidence          Evidence[]
+  auditLogs         AuditLog[]
+  escalations       EscalationEvent[]
+  notifications     Notification[]
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  findingId String
+  finding   Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  type      String
+  content   String
+  metadata  String?
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  findingId String
+  finding   Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  type      String   @default("COMMENT")
+  createdAt DateTime @default(now())
+}
+
+model ImportBatch {
+  id           String    @id @default(uuid())
+  fileName     String
+  importedById String
+  importedBy   User      @relation(fields: [importedById], references: [id])
+  totalRows    Int       @default(0)
+  successCount Int       @default(0)
+  errorCount   Int       @default(0)
+  errors       String?
+  createdAt    DateTime  @default(now())
+  findings     Finding[]
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  findingId  String
+  finding    Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  fileName   String
+  fileType   String
+  fileSize   Int
+  url        String
+  createdAt  DateTime @default(now())
+}
+
+model Evidence {
+  id          String   @id @default(uuid())
+  findingId   String
+  finding     Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  description String
+  fileName    String?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  findingId  String?
+  finding    Finding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  oldValue   String?
+  newValue   String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model EscalationEvent {
+  id        String   @id @default(uuid())
+  findingId String
+  finding   Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  level     String
+  message   String
+  sentTo    String
+  channel   String   @default("DASHBOARD")
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  findingId String?
+  finding   Finding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  channel   String   @default("DASHBOARD")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model IntegrationConfig {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String
+  isEnabled   Boolean  @default(false)
+  config      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

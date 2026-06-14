@@ -1,0 +1,3 @@
+# Azure App Service startup command (Linux, Node.js runtime — no Docker)
+# Set in: Azure Portal → App Service → Configuration → General settings → Startup Command
+npm run start:production
