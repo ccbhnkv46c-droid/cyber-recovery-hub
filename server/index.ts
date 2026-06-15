@@ -18,6 +18,7 @@ import importRoutes from './routes/import';
 import bulkRoutes from './routes/bulk';
 import prisma from '../lib/prisma';
 import { config, validateProductionConfig } from '../lib/config';
+import { logRuntimeDiagnostics } from '../lib/runtime-diagnostics';
 import { initJobQueue, shutdownJobQueue } from './services/queue/jobQueue';
 import { cleanupExpiredSessions } from './middleware/auth';
 
@@ -106,6 +107,8 @@ if (config.isProduction) {
     console.warn(`[Production] ${warning}`);
   }
 }
+
+logRuntimeDiagnostics();
 
 const server = app.listen(config.apiPort, config.apiHost, () => {
   console.log(`Cyber Recovery Hub API v1.2.0 on http://${config.apiHost}:${config.apiPort}`);

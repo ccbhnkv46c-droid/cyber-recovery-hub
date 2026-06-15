@@ -1,5 +1,7 @@
-# Dependencies
+# Dependencies (never copy host node_modules — Prisma engines are platform-specific)
 node_modules
+node_modules/.prisma
+.prisma
 npm-debug.log*
 
 # Local env & secrets

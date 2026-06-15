@@ -1,7 +1,6 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
-buildCommand = "npm run build"
 
 [deploy]
 startCommand = "npm run start:production"

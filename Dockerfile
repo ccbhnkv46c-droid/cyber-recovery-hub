@@ -6,12 +6,24 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
+RUN echo "=== Docker builder image: node:20-bookworm-slim ===" \
+  && node -p "process.platform + ' ' + process.version"
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN node scripts/prisma-generate.cjs
+# Force PostgreSQL schema during image build (no host SQLite .env)
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
+
+RUN echo "=== Regenerating Prisma Client for debian-openssl-3.0.x ===" \
+  && rm -rf node_modules/.prisma node_modules/@prisma/client \
+  && npm install @prisma/client@5.22.0 prisma@5.22.0 \
+  && npx prisma generate --schema=prisma/schema.prisma \
+  && echo "=== Prisma query engines in builder ===" \
+  && ls -1 node_modules/.prisma/client/ | grep query_engine
+
 RUN npm run build
 
 FROM node:20-bookworm-slim AS runner
@@ -24,6 +36,8 @@ RUN apt-get update \
   && useradd --uid 1001 --gid nodejs --create-home crh \
   && mkdir -p uploads \
   && chown -R crh:nodejs uploads
+
+RUN echo "=== Docker runner image: node:20-bookworm-slim ==="
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -43,6 +57,11 @@ COPY --from=builder /app/components ./components
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/scripts ./scripts
+
+RUN echo "=== Prisma query engines in runner ===" \
+  && ls -1 node_modules/.prisma/client/ | grep query_engine \
+  && ! ls node_modules/.prisma/client/ | grep -q musl \
+  && echo "=== OK: debian engine present, no musl engine ==="
 
 RUN chmod +x ./scripts/start-production.sh && chown -R crh:nodejs /app
 USER crh
