@@ -5,7 +5,11 @@ const { resolveApiRewriteUrl } = require('./lib/urls.cjs');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: process.env.VERCEL ? undefined : 'standalone',
+  // Standalone breaks `next start` rewrites in monolith deploys (Railway, Docker+Express)
+  output:
+    process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PUBLIC_DOMAIN
+      ? undefined
+      : 'standalone',
   async rewrites() {
     const apiRewriteUrl = resolveApiRewriteUrl();
     console.log(`[next.config] API rewrite destination: ${apiRewriteUrl}/api/*`);
