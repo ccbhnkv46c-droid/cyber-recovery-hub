@@ -1,7 +1,8 @@
 // Local development only — SQLite is not suitable for Vercel or Azure App Service.
 // Usage: npx prisma db push --schema=prisma/schema.sqlite.prisma
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
