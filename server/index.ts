@@ -111,6 +111,7 @@ if (config.isProduction) {
 logRuntimeDiagnostics();
 
 const server = app.listen(config.apiPort, config.apiHost, () => {
+  console.log(`[API] Listening on http://${config.apiHost}:${config.apiPort}`);
   console.log(`Cyber Recovery Hub API v1.2.0 on http://${config.apiHost}:${config.apiPort}`);
   console.log(`  App URL: ${config.appUrl}`);
   console.log(`  API rewrite target: ${config.apiRewriteUrl}`);
@@ -119,6 +120,20 @@ const server = app.listen(config.apiPort, config.apiHost, () => {
   console.log(`  Queue: ${config.redisUrl ? 'Redis/BullMQ' : 'In-process'}`);
   console.log(`  Copilot: ${config.copilot.openaiApiKey ? 'LLM + grounded' : 'Analytics engine'}`);
   console.log(`  Email: ${config.notifications.emailEnabled ? 'SMTP enabled' : 'Console only'}`);
+});
+
+server.on('error', (err: NodeJS.ErrnoException) => {
+  console.error(`[API] Failed to bind ${config.apiHost}:${config.apiPort}:`, err.message);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[API] uncaughtException:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[API] unhandledRejection:', reason);
 });
 
 process.on('SIGTERM', async () => {

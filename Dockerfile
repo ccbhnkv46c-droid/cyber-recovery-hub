@@ -14,6 +14,9 @@ RUN npm ci
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV API_PORT=3001
+ENV USE_INTERNAL_API=true
+ENV RAILWAY_ENVIRONMENT=production
 # Force PostgreSQL schema during image build (no host SQLite .env)
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 
