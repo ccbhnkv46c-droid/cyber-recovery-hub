@@ -10,22 +10,21 @@ RUN echo "=== Docker builder image: node:20-bookworm-slim ===" \
   && node -p "process.platform + ' ' + process.version"
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV API_PORT=3001
 ENV USE_INTERNAL_API=true
 ENV RAILWAY_ENVIRONMENT=production
-# Force PostgreSQL schema during image build (no host SQLite .env)
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 
-RUN echo "=== Regenerating Prisma Client for debian-openssl-3.0.x ===" \
-  && rm -rf node_modules/.prisma node_modules/@prisma/client \
-  && npm install @prisma/client@5.22.0 prisma@5.22.0 \
-  && npx prisma generate --schema=prisma/schema.prisma \
-  && echo "=== Prisma query engines in builder ===" \
-  && ls -1 node_modules/.prisma/client/ | grep query_engine
+RUN rm -rf node_modules/.prisma node_modules/@prisma/client
+RUN npm install @prisma/client@5.22.0 prisma@5.22.0
+RUN npx prisma generate --schema=prisma/schema.prisma
+RUN echo "=== Prisma query engines (builder) ===" \
+  && ls -1 node_modules/.prisma/client/ | grep query_engine \
+  && ! ls node_modules/.prisma/client/ | grep -q musl
 
 RUN npm run build
 
@@ -61,10 +60,10 @@ COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/scripts ./scripts
 
-RUN echo "=== Prisma query engines in runner ===" \
+RUN echo "=== Prisma query engines (runner) ===" \
   && ls -1 node_modules/.prisma/client/ | grep query_engine \
   && ! ls node_modules/.prisma/client/ | grep -q musl \
-  && echo "=== OK: debian engine present, no musl engine ==="
+  && echo "=== OK: debian engine only, no musl ==="
 
 RUN chmod +x ./scripts/start-production.sh && chown -R crh:nodejs /app
 USER crh
