@@ -15,6 +15,14 @@ if [ -n "$DATABASE_URL" ] && [ "$RUN_DB_PUSH" = "true" ]; then
   npx prisma db push --skip-generate || echo "[startup] WARNING: db push failed (continuing)"
 fi
 
+if [ "$RUN_DB_SEED" = "true" ]; then
+  echo "[startup] RUN_DB_SEED=true — seeding database..."
+  node scripts/prisma-seed.cjs || exit 1
+elif [ -n "$DATABASE_URL" ]; then
+  echo "[startup] Checking whether database needs seeding..."
+  node scripts/check-and-seed.cjs || exit 1
+fi
+
 : > "$API_LOG"
 
 echo "[startup] Launching Express API (tsx server/index.ts)..."
