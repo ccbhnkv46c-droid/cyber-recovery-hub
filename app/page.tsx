@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3, Settings, ArrowRight, Activity, CheckCircle, Clock, Target, Timer } from 'lucide-react';
 import { apiFetch } from '@/lib/store';
 import { BRAND } from '@/lib/branding';
@@ -71,6 +72,14 @@ export default function HomePage() {
         </header>
 
         <section className="mb-12 text-center">
+          <Image
+            src="/images/logo.png"
+            alt="Cyber Recover"
+            width={500}
+            height={500}
+            priority
+            className="mx-auto mb-6 h-auto w-full max-w-[250px] object-contain md:max-w-[500px]"
+          />
           <h1 className="font-display text-5xl font-bold tracking-tight sm:text-6xl">
             {BRAND.shortName}
           </h1>
