@@ -51,6 +51,7 @@ ENV TRUST_PROXY=true
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/prisma ./prisma
@@ -64,6 +65,11 @@ RUN echo "=== Prisma query engines (runner) ===" \
   && ls -1 node_modules/.prisma/client/ | grep query_engine \
   && ! ls node_modules/.prisma/client/ | grep -q musl \
   && echo "=== OK: debian engine only, no musl ==="
+
+RUN echo "=== Public static assets ===" \
+  && ls -la public/images \
+  && test -f public/images/logo.png \
+  && echo "=== OK: public/images/logo.png present ==="
 
 RUN chmod +x ./scripts/start-production.sh && chown -R crh:nodejs /app
 USER crh
