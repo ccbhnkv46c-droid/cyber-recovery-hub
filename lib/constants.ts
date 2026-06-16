@@ -103,7 +103,7 @@ export function generateEscalationMessage(
     ENGINEERING_MANAGER: `Escalation to Engineering Manager: Finding ${findingId} "${title}" has exceeded SLA. Team intervention required.`,
     HEAD_OF_TECHNOLOGY: `Escalation to Head of Technology: Critical finding ${findingId} "${title}" requires executive attention.`,
     CISO: `CISO Alert: Finding ${findingId} "${title}" has reached maximum escalation level. Enterprise risk exposure.`,
-    BOARD: `Board Notification: Critical cyber recovery item ${findingId} requires governance visibility.`,
+    BOARD: `Board Notification: Critical recover item ${findingId} requires governance visibility.`,
   };
   return messages[level] || '';
 }

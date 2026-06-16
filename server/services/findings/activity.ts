@@ -1,5 +1,6 @@
 import prisma from '../../../lib/prisma';
 import { config } from '../../../lib/config';
+import { BRAND } from '../../../lib/branding';
 import { dispatchNotification } from '../notifications/dispatcher';
 import { getDaysRemaining } from '../../../lib/constants';
 import { STATUS_LABELS } from '../../../lib/services';
@@ -30,7 +31,7 @@ export async function sendFindingUpdateEmail(params: FindingUpdateEmailParams & 
   const statusLabel = STATUS_LABELS[params.status] || params.status;
 
   const body = `
-Cyber Recovery Hub — Vulnerability Update
+Cyber Recover — Vulnerability Update
 
 Finding ID:    ${params.findingId}
 Title:         ${params.title}
@@ -50,7 +51,7 @@ Updated By:    ${params.updatedByName}
 Updated At:    ${new Date().toLocaleString('en-GB')}
 
 —
-Cyber Recovery Hub | Automated Notification
+${BRAND.shortName} | Automated Notification
 `.trim();
 
   const emailPayload = {

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { BRAND } from './branding';
 import { formatDate, escalationLabel } from './utils';
 
 interface ExportFinding {
@@ -22,7 +23,7 @@ export function exportFindingsPDF(findings: ExportFinding[], title = 'Vulnerabil
   const date = new Date().toLocaleDateString('en-GB');
 
   doc.setFontSize(18);
-  doc.text('Cyber Recovery Hub', 14, 18);
+  doc.text(BRAND.shortName, 14, 18);
   doc.setFontSize(12);
   doc.text(title, 14, 26);
   doc.setFontSize(9);
@@ -63,7 +64,7 @@ export function exportBoardPDF(data: {
   const date = new Date().toLocaleDateString('en-GB');
 
   doc.setFontSize(20);
-  doc.text('Cyber Recovery Hub', 14, 20);
+  doc.text(BRAND.shortName, 14, 20);
   doc.setFontSize(14);
   doc.text('Board Executive Summary', 14, 30);
   doc.setFontSize(9);
@@ -79,7 +80,7 @@ export function exportBoardPDF(data: {
       ['Open Findings', String(data.openFindings)],
       ['Overdue Findings', String(data.overdueFindings)],
       ['SLA Compliance', `${data.slaCompliance}%`],
-      ['Recovery Performance', `${data.recoveryPerformance}%`],
+      ['Recover Performance', `${data.recoveryPerformance}%`],
     ],
     styles: { fontSize: 11 },
     headStyles: { fillColor: [26, 130, 245] },

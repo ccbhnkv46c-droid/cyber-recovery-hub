@@ -214,7 +214,7 @@ export default function FindingDetailPage() {
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="CVSS Score" value={(f.cvssScore as number).toFixed(1)} icon={Shield} />
-        <MetricCard title="Recovery Score" value={Math.round(f.recoveryScore as number)} icon={AlertTriangle} color="red" />
+        <MetricCard title="Recover Score" value={Math.round(f.recoveryScore as number)} icon={AlertTriangle} color="red" />
         <MetricCard title="Risk Level" value={f.riskLevel as string} icon={Shield} color="orange" />
         <MetricCard title="Target Date" value={formatDate(f.targetDate as string)} icon={Clock} />
       </div>

@@ -45,7 +45,7 @@ export default function AnalyticsPage() {
     <ProtectedLayout>
       <PageHeader
         title="Analytics & Reports"
-        description="Power BI style analytics for cyber recovery performance"
+        description="Power BI style analytics for recover performance"
       />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 dark:border-surface-800">
-                {['Finding ID', 'Title', 'Severity', 'Recovery Score'].map((h) => (
+                {['Finding ID', 'Title', 'Severity', 'Recover Score'].map((h) => (
                   <th key={h} className="px-4 py-2 text-left text-xs font-medium uppercase text-surface-500">{h}</th>
                 ))}
               </tr>

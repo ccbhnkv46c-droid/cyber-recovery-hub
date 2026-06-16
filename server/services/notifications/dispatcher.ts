@@ -68,7 +68,7 @@ export class TeamsWebhookAdapter implements NotificationAdapter {
           activityTitle: payload.subject,
           facts: [
             { name: 'Finding', value: payload.findingId || 'N/A' },
-            { name: 'Channel', value: 'Cyber Recovery Hub' },
+            { name: 'Channel', value: 'Cyber Recover' },
           ],
           text: payload.message,
         }],

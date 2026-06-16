@@ -10,6 +10,8 @@ import {
 } from '@/components/charts';
 import { apiFetch, useAuthStore } from '@/lib/store';
 import { usePolling } from '@/lib/hooks/usePolling';
+import { BRAND } from '@/lib/branding';
+import { Logo } from '@/components/branding/Logo';
 import {
   AlertTriangle, Shield, Clock, TrendingDown, CheckCircle, Target, Timer, Activity,
 } from 'lucide-react';
@@ -104,13 +106,32 @@ export default function DashboardPage() {
 
   return (
     <ProtectedLayout>
+      {!isCiso && !isManager && (
+        <section className="mb-8 overflow-hidden rounded-2xl border border-brand-500/20 bg-gradient-to-br from-brand-600/10 via-surface-900/5 to-brand-500/5 p-8 dark:from-brand-600/20 dark:via-surface-900/40">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <Logo size={56} className="mb-4" priority />
+              <h1 className="font-display text-3xl font-bold text-surface-900 dark:text-white sm:text-4xl">
+                {BRAND.shortName}
+              </h1>
+              <p className="mt-2 text-lg font-medium text-brand-600 dark:text-brand-400">
+                {BRAND.tagline}
+              </p>
+              <p className="mt-4 text-sm leading-relaxed text-surface-600 dark:text-surface-400">
+                {BRAND.heroDescription}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <PageHeader
-        title={isCiso ? 'CISO Dashboard' : isManager ? 'Manager Dashboard' : 'Recovery Dashboard'}
+        title={isCiso ? 'CISO Dashboard' : isManager ? 'Manager Dashboard' : 'Recover Dashboard'}
         description={isCiso
           ? 'Enterprise risk posture, overdue exposure, and organisational performance'
           : isManager
             ? 'Your team\'s vulnerability remediation status and SLA compliance'
-            : 'Real-time cyber recovery metrics and organisational performance'}
+            : 'Real-time recover metrics and organisational performance'}
         actions={
           lastUpdated && (
             <span className="flex items-center gap-1 text-xs text-surface-500">
@@ -204,7 +225,7 @@ export default function DashboardPage() {
           {enhanced && <SlaTrendChart data={enhanced.slaTrend} />}
         </div>
         <div className="card lg:col-span-2">
-          <h3 className="mb-4 font-display text-lg font-semibold">Monthly Recovery Trend</h3>
+          <h3 className="mb-4 font-display text-lg font-semibold">Monthly Recover Trend</h3>
           {enhanced && <RecoveryTrendChart data={enhanced.monthlyRecoveryTrend} />}
         </div>
         <div className="card lg:col-span-2">

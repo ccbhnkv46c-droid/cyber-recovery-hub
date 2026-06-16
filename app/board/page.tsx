@@ -39,7 +39,7 @@ export default function BoardPage() {
     <ProtectedLayout>
       <PageHeader
         title="Board Dashboard"
-        description="Governance-level cyber recovery oversight — read-only"
+        description="Governance-level recover oversight — read-only"
         actions={
           <button onClick={handleExport} className="btn-secondary">
             <Download className="h-4 w-4" /> Export Board Pack
@@ -52,10 +52,10 @@ export default function BoardPage() {
       </div>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Cyber Risk" value={board.totalCyberRisk} icon={Shield} color="red" subtitle="Aggregate recovery score" />
+        <MetricCard title="Total Cyber Risk" value={board.totalCyberRisk} icon={Shield} color="red" subtitle="Aggregate recover score" />
         <MetricCard title="Critical Findings" value={board.criticalFindings} icon={AlertTriangle} color="red" />
         <MetricCard title="SLA Compliance" value={`${board.slaCompliance}%`} icon={Target} color="green" />
-        <MetricCard title="Recovery Performance" value={`${board.recoveryPerformance}%`} icon={TrendingUp} color="brand" />
+        <MetricCard title="Recover Performance" value={`${board.recoveryPerformance}%`} icon={TrendingUp} color="brand" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

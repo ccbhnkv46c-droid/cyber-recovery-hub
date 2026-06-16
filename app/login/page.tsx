@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, LogIn, User, ChevronRight } from 'lucide-react';
+import { LogIn, User, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { getDefaultRoute } from '@/lib/rbac';
 import { toast } from '@/lib/toast';
 import { apiPath, logApiCall, parseJsonResponse, safeAppRoute } from '@/lib/api-client';
+import { BRAND } from '@/lib/branding';
+import { Logo } from '@/components/branding/Logo';
 
 const DEMO_USERS = [
   { email: 'administrator@crh.bank.com', role: 'Administrator', name: 'Administrator', password: 'AdminCrh2025!' },
@@ -94,21 +96,17 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       <div className="hidden w-1/2 flex-col justify-between bg-surface-950 p-12 lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600">
-            <Shield className="h-6 w-6 text-white" />
-          </div>
-          <span className="font-display text-lg font-bold text-white">Cyber Recovery Hub</span>
-        </div>
+        <Logo size={40} showText textClassName="text-white" subtitle={BRAND.tagline} priority />
         <div>
           <h2 className="font-display text-4xl font-bold text-white">
-            Enterprise Cyber Recovery
+            {BRAND.shortName}
           </h2>
+          <p className="mt-2 text-lg text-brand-400">{BRAND.tagline}</p>
           <p className="mt-4 text-lg text-surface-400">
-            Automated SLA management, intelligent escalation, and executive visibility for Tier 1 banking.
+            {BRAND.heroDescription}
           </p>
           <div className="mt-8 grid grid-cols-2 gap-3">
-            {['Role-Based Access', '520+ Findings', 'SLA Engine', 'Recovery Copilot'].map((f) => (
+            {['Role-Based Access', '520+ Findings', 'SLA Engine', BRAND.copilotName].map((f) => (
               <div key={f} className="rounded-lg border border-surface-800 bg-surface-900/50 px-4 py-3 text-sm text-surface-300">
                 {f}
               </div>
@@ -120,8 +118,11 @@ export default function LoginPage() {
 
       <div className="flex flex-1 flex-col justify-center px-8 py-12">
         <div className="mx-auto w-full max-w-md">
+          <div className="mb-6 lg:hidden">
+            <Logo size={44} showText textClassName="text-surface-900 dark:text-white" subtitle={BRAND.tagline} />
+          </div>
           <h1 className="font-display text-2xl font-bold text-surface-900 dark:text-white">Sign in</h1>
-          <p className="mt-2 text-sm text-surface-500">Access the Cyber Recovery Hub platform</p>
+          <p className="mt-2 text-sm text-surface-500">Access the {BRAND.shortName} platform</p>
 
           <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="mt-8 space-y-4">
             <div>

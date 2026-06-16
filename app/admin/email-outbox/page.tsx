@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { PageHeader, LoadingSpinner } from '@/components/ui';
 import { apiFetch } from '@/lib/store';
+import { BRAND } from '@/lib/branding';
 import { formatDateTime } from '@/lib/utils';
 import { Mail } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export default function EmailOutboxPage() {
     <ProtectedLayout>
       <PageHeader
         title="Email Outbox"
-        description="All automated email notifications sent by the Cyber Recovery Hub"
+        description={`All automated email notifications sent by ${BRAND.shortName}`}
       />
 
       <div className="space-y-3">

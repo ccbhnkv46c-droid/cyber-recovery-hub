@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Shield, LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3, Settings, ArrowRight, Activity, CheckCircle, Clock, Target, Timer } from 'lucide-react';
+import { LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3, Settings, ArrowRight, Activity, CheckCircle, Clock, Target, Timer } from 'lucide-react';
 import { apiFetch } from '@/lib/store';
+import { BRAND } from '@/lib/branding';
+import { Logo } from '@/components/branding/Logo';
 
 const NAV_CARDS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, desc: 'Executive overview and KPIs' },
@@ -56,12 +58,13 @@ export default function HomePage() {
 
       <div className="relative mx-auto max-w-6xl px-6 py-16">
         <header className="mb-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 shadow-glow">
-              <Shield className="h-7 w-7 text-white" />
-            </div>
-            <span className="font-display text-lg font-bold">Cyber Recovery Hub</span>
-          </div>
+          <Logo
+            size={48}
+            showText
+            textClassName="text-white"
+            subtitle={BRAND.tagline}
+            priority
+          />
           <Link href="/login" className="btn-primary">
             Sign In <ArrowRight className="h-4 w-4" />
           </Link>
@@ -69,10 +72,13 @@ export default function HomePage() {
 
         <section className="mb-12 text-center">
           <h1 className="font-display text-5xl font-bold tracking-tight sm:text-6xl">
-            Cyber Recovery Hub
+            {BRAND.shortName}
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-surface-400">
-            Transforming vulnerability recovery through automation and accountability.
+          <p className="mx-auto mt-4 max-w-2xl text-xl text-brand-400">
+            {BRAND.tagline}
+          </p>
+          <p className="mx-auto mt-6 max-w-3xl text-lg text-surface-400">
+            {BRAND.heroDescription}
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link href="/login" className="btn-primary px-8 py-3 text-base">
@@ -133,7 +139,7 @@ export default function HomePage() {
         </section>
 
         <footer className="mt-20 border-t border-surface-800 pt-8 text-center text-sm text-surface-500">
-          <p>Enterprise Cyber Recovery Platform &mdash; Tier 1 Banking Grade</p>
+          <p>{BRAND.fullName}</p>
           <p className="mt-1">Automated SLA Management &bull; Intelligent Escalation &bull; Executive Visibility</p>
         </footer>
       </div>

@@ -61,7 +61,7 @@ app.get('/api/health', async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({
       status: 'healthy',
-      service: 'Cyber Recovery Hub API',
+      service: 'Cyber Recover API',
       version: '1.2.0',
       database: 'connected',
       environment: config.isDev ? 'development' : 'production',
@@ -112,7 +112,7 @@ logRuntimeDiagnostics();
 
 const server = app.listen(config.apiPort, config.apiHost, () => {
   console.log(`[API] Listening on http://${config.apiHost}:${config.apiPort}`);
-  console.log(`Cyber Recovery Hub API v1.2.0 on http://${config.apiHost}:${config.apiPort}`);
+  console.log(`Cyber Recover API v1.2.0 on http://${config.apiHost}:${config.apiPort}`);
   console.log(`  App URL: ${config.appUrl}`);
   console.log(`  API rewrite target: ${config.apiRewriteUrl}`);
   console.log(`  CORS origins: ${config.corsOrigins.join(', ')}`);

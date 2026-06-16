@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Shield, List, UserCheck, AlertTriangle, BarChart3,
+  LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3,
   Settings, LogOut, Moon, Sun, Bell, Menu, Bot, Building2, CheckSquare, Upload, Server, Mail, CheckCircle,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore, useThemeStore, apiFetch } from '@/lib/store';
 import { getNavForRole, APP_VERSION } from '@/lib/rbac';
+import { Logo } from '@/components/branding/Logo';
 import { cn } from '@/lib/utils';
 import { DebugPanel } from '@/components/layout/DebugPanel';
 
@@ -52,14 +53,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900 transition-transform lg:static lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
-        <div className="flex h-16 items-center gap-3 border-b border-surface-200 px-6 dark:border-surface-800">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className="font-display text-sm font-bold text-surface-900 dark:text-white">Cyber Recovery</p>
-            <p className="text-[10px] text-surface-500">Hub v{APP_VERSION}</p>
-          </div>
+        <div className="flex h-16 items-center border-b border-surface-200 px-4 dark:border-surface-800">
+          <Logo
+            size={36}
+            showText
+            subtitle={`v${APP_VERSION}`}
+            textClassName="text-surface-900 dark:text-white"
+            priority
+          />
         </div>
 
         {isAdmin && (
@@ -110,12 +111,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-surface-200 bg-white/80 px-6 backdrop-blur dark:border-surface-800 dark:bg-surface-900/80">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="hidden text-sm text-surface-500 lg:block">
-            {isAdmin ? 'Administrator Console' : user?.department}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-surface-200 bg-white/80 px-4 backdrop-blur dark:border-surface-800 dark:bg-surface-900/80 sm:px-6">
+          <div className="flex items-center gap-3">
+            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </button>
+            <Logo size={28} className="lg:hidden" priority />
+            <div className="hidden text-sm text-surface-500 lg:block">
+              {isAdmin ? 'Administrator Console' : user?.department}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/notifications" className="btn-ghost relative">

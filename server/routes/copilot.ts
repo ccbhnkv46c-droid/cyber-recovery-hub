@@ -53,7 +53,7 @@ router.post('/ask', authMiddleware, async (req: AuthRequest, res: Response) => {
       data: { metrics: context.metrics, topFindings: context.topFindings.slice(0, 5) },
       source: llm.source,
       generatedAt: new Date().toISOString(),
-      assistant: 'Recovery Copilot',
+      assistant: 'Recover Copilot',
     });
   }
 
@@ -62,7 +62,7 @@ router.post('/ask', authMiddleware, async (req: AuthRequest, res: Response) => {
     question,
     ...result,
     generatedAt: new Date().toISOString(),
-    assistant: 'Recovery Copilot',
+    assistant: 'Recover Copilot',
   });
 });
 

@@ -162,7 +162,7 @@ export default function RegisterPage() {
         title="Vulnerability Register"
         description={user?.role === 'ADMIN'
           ? 'Full register — select and bulk-assign vulnerabilities to SMEs'
-          : 'Search, filter and manage cyber recovery findings'}
+          : 'Search, filter and manage recover findings'}
         actions={
           <>
             <button onClick={exportExcel} className="btn-secondary">

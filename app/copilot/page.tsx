@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import { PageHeader } from '@/components/ui';
 import { apiFetch } from '@/lib/store';
+import { BRAND } from '@/lib/branding';
 import { Bot, Send, Sparkles } from 'lucide-react';
 
 const SUGGESTIONS = [
@@ -48,8 +49,8 @@ export default function CopilotPage() {
   return (
     <ProtectedLayout>
       <PageHeader
-        title="Recovery Copilot"
-        description="Intelligent recovery analytics — prioritisation, risk analysis, and executive reporting"
+        title={BRAND.copilotName}
+        description="Intelligent recover analytics — prioritisation, risk analysis, and executive reporting"
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -60,7 +61,7 @@ export default function CopilotPage() {
                 <Bot className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="font-display font-semibold">Recovery Copilot</p>
+                <p className="font-display font-semibold">{BRAND.copilotName}</p>
                 <p className="text-xs text-surface-500">Grounded in live finding data and SLA analytics</p>
               </div>
             </div>
@@ -69,7 +70,7 @@ export default function CopilotPage() {
               {history.length === 0 && !response && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Sparkles className="mb-4 h-12 w-12 text-brand-400" />
-                  <p className="text-lg font-medium">How can I help with cyber recovery today?</p>
+                  <p className="text-lg font-medium">How can I help with {BRAND.functionName.toLowerCase()} today?</p>
                   <p className="mt-2 max-w-md text-sm text-surface-500">
                     Ask about priorities, risk analysis, SLA performance, or request executive reports.
                   </p>
@@ -122,7 +123,7 @@ export default function CopilotPage() {
             <div className="mt-4 flex gap-2 border-t border-surface-200 pt-4 dark:border-surface-800">
               <input
                 className="input flex-1"
-                placeholder="Ask Recovery Copilot..."
+                placeholder={`Ask ${BRAND.copilotName}...`}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && ask(question)}

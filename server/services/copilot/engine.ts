@@ -75,7 +75,7 @@ export async function askLLM(question: string, context: GroundedContext): Promis
     return { answer: '', source: 'analytics' };
   }
 
-  const systemPrompt = `You are Recovery Copilot, an enterprise cyber recovery assistant for a Tier 1 bank.
+  const systemPrompt = `You are Recover Copilot, an enterprise cyber recover assistant for a Tier 1 bank.
 Answer ONLY based on the provided live data. Be concise, executive-ready, and actionable.
 Never invent findings or metrics not in the context.`;
 

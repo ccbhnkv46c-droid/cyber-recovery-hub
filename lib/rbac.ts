@@ -106,7 +106,7 @@ export interface NavItem {
 }
 
 const ADMIN_NAV: NavItem[] = [
-  { href: '/dashboard', label: 'Recovery Dashboard', icon: 'LayoutDashboard', section: 'Overview' },
+  { href: '/dashboard', label: 'Recover Dashboard', icon: 'LayoutDashboard', section: 'Overview' },
   { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle', section: 'Overview' },
   { href: '/register', label: 'Vulnerability Register', icon: 'List', section: 'Operations' },
   { href: '/import', label: 'Import Vulnerabilities', icon: 'Upload', section: 'Operations' },
@@ -114,7 +114,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle', section: 'Operations' },
   { href: '/approvals', label: 'Approvals', icon: 'CheckSquare', section: 'Operations' },
   { href: '/analytics', label: 'Reports', icon: 'BarChart3', section: 'Insights' },
-  { href: '/copilot', label: 'Recovery Copilot', icon: 'Bot', section: 'Insights' },
+  { href: '/copilot', label: 'Recover Copilot', icon: 'Bot', section: 'Insights' },
   { href: '/admin', label: 'User Management', icon: 'Building2', section: 'Administration' },
   { href: '/admin/email-outbox', label: 'Email Outbox', icon: 'Mail', section: 'Administration' },
   { href: '/notifications', label: 'Notifications', icon: 'Bell', section: 'Administration' },
@@ -143,7 +143,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/approvals', label: 'Approvals', icon: 'CheckSquare' },
     { href: '/analytics', label: 'Reports', icon: 'BarChart3' },
-    { href: '/copilot', label: 'Recovery Copilot', icon: 'Bot' },
+    { href: '/copilot', label: 'Recover Copilot', icon: 'Bot' },
     { href: '/settings', label: 'Settings', icon: 'Settings' },
   ],
   CISO: [
@@ -152,7 +152,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/analytics', label: 'Reports', icon: 'BarChart3' },
-    { href: '/copilot', label: 'Recovery Copilot', icon: 'Bot' },
+    { href: '/copilot', label: 'Recover Copilot', icon: 'Bot' },
     { href: '/settings', label: 'Settings', icon: 'Settings' },
   ],
   TEAM_LEADER: [
