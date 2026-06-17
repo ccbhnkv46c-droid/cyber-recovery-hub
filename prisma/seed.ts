@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { Severity, EscalationLevel, FindingStatus, UserRole } from '../lib/constants';
 import bcrypt from 'bcryptjs';
 import { DEFAULT_SERVICES } from '../lib/services';
+import { deriveExposureLevel } from '../lib/assets';
 import { calculateRiskScore, calculateTargetDate, SLA_DAYS } from '../lib/constants';
 
 const prisma = new PrismaClient();
@@ -94,6 +95,7 @@ async function main() {
   await prisma.auditLog.deleteMany();
   await prisma.finding.deleteMany();
   await prisma.importBatch.deleteMany();
+  await prisma.asset.deleteMany();
   await prisma.application.deleteMany();
   await prisma.service.deleteMany();
   await prisma.session.deleteMany();
@@ -269,6 +271,40 @@ async function main() {
     )
   );
 
+  const assetTypes = ['Server', 'Database', 'Application', 'Network Device', 'Cloud Resource'];
+  const environments = ['PRODUCTION', 'PRODUCTION', 'PRODUCTION', 'TEST', 'DEVELOPMENT'];
+  const criticalityLevels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+  const dataClasses = ['Restricted', 'Confidential', 'Internal', 'Public'];
+  const hostingLocations = ['London DC1', 'London DC2', 'AWS eu-west-2', 'Azure UK South', 'On-Premise DMZ'];
+
+  const assets = [];
+  for (const app of apps) {
+    const serviceId = pickService(app.technologyStack);
+    const env = random(environments);
+    const internetFacing = Math.random() > 0.65;
+    const assetCount = random([1, 2, 3]);
+    for (let j = 0; j < assetCount; j++) {
+      const asset = await prisma.asset.create({
+        data: {
+          name: `${app.name}-${random(['prod', 'uat', 'dev'])}-${random(['web', 'app', 'db', 'api'])}-${j + 1}`,
+          assetType: random(assetTypes),
+          hostingLocation: random(hostingLocations),
+          environment: env,
+          internetFacing,
+          criticalService: Math.random() > 0.7,
+          dataClassification: random(dataClasses),
+          businessCriticality: random(criticalityLevels),
+          owner: `${random(FIRST_NAMES)} ${random(LAST_NAMES)}`,
+          serviceId,
+          applicationId: app.id,
+          technicalOwnerId: engineers[Math.floor(Math.random() * engineers.length)].id,
+          smeId: smeUsers.length ? smeUsers[Math.floor(Math.random() * smeUsers.length)].id : undefined,
+        },
+      });
+      assets.push(asset);
+    }
+  }
+
   const severities: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
   const severityWeights = [0.08, 0.22, 0.40, 0.30];
   const statuses: FindingStatus[] = ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'PENDING_REVIEW', 'PENDING_EXCEPTION', 'RISK_ACCEPTED', 'REMEDIATED', 'CLOSED'];
@@ -315,6 +351,9 @@ async function main() {
 
     const technology = random(TECHNOLOGIES);
     const serviceId = pickService(technology);
+    const appAssets = assets.filter((a) => a.applicationId === app.id);
+    const linkedAsset = appAssets.length ? random(appAssets) : assets[Math.floor(Math.random() * assets.length)];
+    const exposureLevel = deriveExposureLevel(linkedAsset.internetFacing, linkedAsset.environment);
     const assignedAt = randomDate(90);
 
     // Assignment model: 200 unassigned (admin assigns), rest split across 4 SMEs
@@ -353,9 +392,11 @@ async function main() {
           : 'NONE',
         serviceId,
         applicationId: app.id,
+        assetId: linkedAsset.id,
+        exposureLevel,
         businessService: app.businessService,
         technology,
-        asset: `${app.name}-${random(['prod', 'uat', 'dev'])}-${random(['web', 'app', 'db', 'api'])}-${randomFloat(1, 99, 0)}`,
+        asset: linkedAsset.name,
         businessArea: app.businessArea,
         ownerId,
         assignedById,
@@ -482,7 +523,7 @@ async function main() {
     });
   }
 
-  console.log(`Seeded: ${services.length} services, ${smeUsers.length} SMEs, ${teams.length} teams, ${engineers.length + managers.length + leaders.length + 7} users, ${apps.length} applications, ${findings.length} findings (${findings.filter((f) => !f.ownerId).length} unassigned)`);
+  console.log(`Seeded: ${services.length} services, ${assets.length} assets, ${smeUsers.length} SMEs, ${teams.length} teams, ${engineers.length + managers.length + leaders.length + 7} users, ${apps.length} applications, ${findings.length} findings (${findings.filter((f) => !f.ownerId).length} unassigned)`);
 }
 
 main()

@@ -75,6 +75,58 @@ router.get('/executive', authMiddleware, async (req: AuthRequest, res: Response)
   });
 });
 
+router.get('/asset-exposure', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const assetWhere: Record<string, unknown> = { isActive: true };
+  if (isAssignedOnlyRole(req.user!.role)) {
+    assetWhere.findings = { some: { ownerId: req.user!.id, status: { in: ACTIVE_STATUSES } } };
+  }
+
+  const assets = await prisma.asset.findMany({
+    where: assetWhere,
+    include: {
+      service: { select: { name: true } },
+      findings: {
+        where: { status: { in: ACTIVE_STATUSES } },
+        select: { severity: true, targetDate: true, status: true },
+      },
+    },
+  });
+
+  const criticalAssetsWithOpenVulns = assets.filter(
+    (a) => a.businessCriticality === 'CRITICAL' && a.findings.length > 0
+  ).length;
+
+  const internetFacingAssetsWithOpenVulns = assets.filter(
+    (a) => a.internetFacing && a.findings.length > 0
+  ).length;
+
+  const assetsWithOverdueRemediation = assets.filter((a) =>
+    a.findings.some((f) => isOverdue(f.targetDate, f.status))
+  ).length;
+
+  const serviceExposure: Record<string, { name: string; open: number; critical: number }> = {};
+  for (const asset of assets) {
+    if (asset.findings.length === 0) continue;
+    const svcName = asset.service.name;
+    if (!serviceExposure[svcName]) {
+      serviceExposure[svcName] = { name: svcName, open: 0, critical: 0 };
+    }
+    serviceExposure[svcName].open += asset.findings.length;
+    serviceExposure[svcName].critical += asset.findings.filter((f) => f.severity === 'CRITICAL').length;
+  }
+
+  const servicesWithHighestExposure = Object.values(serviceExposure)
+    .sort((a, b) => b.open - a.open)
+    .slice(0, 5);
+
+  res.json({
+    criticalAssetsWithOpenVulns,
+    internetFacingAssetsWithOpenVulns,
+    servicesWithHighestExposure,
+    assetsWithOverdueRemediation,
+  });
+});
+
 router.get('/charts', authMiddleware, async (_req: AuthRequest, res: Response) => {
   const findings = await prisma.finding.findMany({
     where: { status: { in: ACTIVE_STATUSES } },

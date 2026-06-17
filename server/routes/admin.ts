@@ -55,7 +55,7 @@ router.get('/email-outbox', authMiddleware, requireRoles('ADMIN'), async (_req, 
 });
 
 router.get('/filters', authMiddleware, async (_req, res: Response) => {
-  const [businessAreas, technologies, applications, owners, services, managers] = await Promise.all([
+  const [businessAreas, technologies, applications, owners, services, managers, assets] = await Promise.all([
     prisma.finding.findMany({ select: { businessArea: true }, distinct: ['businessArea'] }),
     prisma.finding.findMany({ select: { technology: true }, distinct: ['technology'] }),
     prisma.application.findMany({ select: { id: true, name: true } }),
@@ -69,6 +69,11 @@ router.get('/filters', authMiddleware, async (_req, res: Response) => {
       where: { role: 'ENGINEERING_MANAGER' },
       select: { id: true, name: true },
     }),
+    prisma.asset.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, serviceId: true, businessCriticality: true },
+      orderBy: { name: 'asc' },
+    }),
   ]);
 
   res.json({
@@ -78,6 +83,7 @@ router.get('/filters', authMiddleware, async (_req, res: Response) => {
     owners,
     services,
     managers,
+    assets,
   });
 });
 

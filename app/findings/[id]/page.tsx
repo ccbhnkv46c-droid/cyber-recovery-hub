@@ -15,6 +15,7 @@ import {
   ArrowUp, Send, Save, CheckCircle, MessageSquare,
 } from 'lucide-react';
 import { TASK_STATUSES, STATUS_LABELS } from '@/lib/services';
+import { ENVIRONMENT_LABELS, EXPOSURE_LABELS } from '@/lib/assets';
 
 const STATUSES = TASK_STATUSES;
 const COMMENT_TYPES = [
@@ -42,6 +43,8 @@ export default function FindingDetailPage() {
   const [evidenceDesc, setEvidenceDesc] = useState('');
   const [evidenceFile, setEvidenceFile] = useState('');
   const [saving, setSaving] = useState(false);
+  const [assets, setAssets] = useState<{ id: string; name: string; serviceId: string }[]>([]);
+  const [editAssetId, setEditAssetId] = useState('');
 
   const loadFinding = useCallback(() => {
     apiFetch<Record<string, unknown>>(`/findings/${id}`)
@@ -52,12 +55,21 @@ export default function FindingDetailPage() {
         setEditBlocker((f.blockerReason as string) || '');
         setEditNextSteps((f.nextSteps as string) || '');
         setEditProgress((f.progress as number) || 0);
+        const asset = f.assetRecord as { id: string } | null;
+        setEditAssetId(asset?.id || '');
       })
       .catch(() => toast('Failed to load finding', 'error'))
       .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => { loadFinding(); }, [loadFinding]);
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      apiFetch<{ assets: { id: string; name: string; serviceId: string }[] }>('/admin/filters')
+        .then((data) => setAssets(data.assets))
+        .catch(() => {});
+    }
+  }, [user?.role]);
 
   const handleComment = async () => {
     if (!comment.trim()) return;
@@ -170,7 +182,16 @@ export default function FindingDetailPage() {
   const canEdit = isSme ? isOwner : user?.role === 'ADMIN' || ['SECURITY_ANALYST', 'TEAM_LEADER', 'ENGINEERING_MANAGER'].includes(user?.role || '');
   const showAudit = canViewAuditTrail(user?.role || '');
   const tabs = ['overview', 'actions', 'timeline', 'discussion', 'evidence', ...(showAudit ? ['audit'] : [])];
-  const service = f.service as { name: string; businessArea: string } | undefined;
+  const service = f.service as { name: string; businessArea: string; criticality?: string } | undefined;
+  const application = f.application as { name: string; businessService?: string } | undefined;
+  const assetRecord = f.assetRecord as {
+    id: string; name: string; assetType: string; environment: string;
+    internetFacing: boolean; businessCriticality: string; dataClassification: string | null;
+    criticalService: boolean; hostingLocation: string | null; owner: string | null;
+    sme: { name: string } | null; technicalOwner: { name: string } | null;
+    businessOwner: { name: string } | null;
+  } | null;
+  const businessOwner = f.businessOwner as { name: string } | undefined;
   const activities = (f.activities as { id: string; type: string; content: string; createdAt: string; user: { name: string; role: string } | null }[]) || [];
   const discussion = (f.comments as { id: string; content: string; type: string; user: { name: string; role: string }; createdAt: string }[]) || [];
 
@@ -298,6 +319,62 @@ export default function FindingDetailPage() {
               </dl>
             </div>
             <div className="card">
+              <h3 className="mb-4 font-semibold">Asset & Service Context</h3>
+              <dl className="space-y-2 text-sm">
+                {[
+                  ['Service', service?.name],
+                  ['Application', application?.name],
+                  ['Asset', assetRecord?.name || (f.asset as string)],
+                  ['Asset Type', assetRecord?.assetType],
+                  ['Environment', assetRecord ? (ENVIRONMENT_LABELS[assetRecord.environment] || assetRecord.environment) : undefined],
+                  ['Exposure', f.exposureLevel ? (EXPOSURE_LABELS[f.exposureLevel as string] || f.exposureLevel) : (assetRecord?.internetFacing ? 'Internet Facing' : 'Internal')],
+                  ['Business Criticality', assetRecord?.businessCriticality],
+                  ['Data Classification', assetRecord?.dataClassification],
+                  ['Hosting Location', assetRecord?.hostingLocation],
+                  ['Business Owner', businessOwner?.name || assetRecord?.businessOwner?.name || assetRecord?.owner],
+                  ['Technical Owner', assetRecord?.technicalOwner?.name],
+                  ['SME', (f.owner as { name: string })?.name || assetRecord?.sme?.name],
+                ].map(([k, v]) => (
+                  <div key={k as string} className="flex justify-between gap-4">
+                    <dt className="text-surface-500">{k as string}</dt>
+                    <dd className="text-right font-medium">{(v as string) || '—'}</dd>
+                  </div>
+                ))}
+              </dl>
+              {user?.role === 'ADMIN' && (
+                <div className="mt-4 border-t border-surface-200 pt-4 dark:border-surface-800">
+                  <label className="mb-1 block text-sm text-surface-500">Link to Asset</label>
+                  <div className="flex gap-2">
+                    <select className="input flex-1" value={editAssetId} onChange={(e) => setEditAssetId(e.target.value)}>
+                      <option value="">No linked asset</option>
+                      {assets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                    <button
+                      className="btn-secondary"
+                      disabled={saving}
+                      onClick={async () => {
+                        setSaving(true);
+                        try {
+                          await apiFetch(`/findings/${id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ assetId: editAssetId || null }),
+                          });
+                          toast('Asset linked', 'success');
+                          loadFinding();
+                        } catch {
+                          toast('Failed to link asset', 'error');
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="card">
               <h3 className="mb-4 font-semibold">Assignment</h3>
               <dl className="space-y-2 text-sm">
                 {[
@@ -305,10 +382,7 @@ export default function FindingDetailPage() {
                   ['Assigned By', (f.assignedBy as { name: string })?.name],
                   ['Team', (f.team as { name: string })?.name],
                   ['Manager', (f.manager as { name: string })?.name],
-                  ['Service', service?.name],
-                  ['Application', (f.application as { name: string })?.name],
                   ['Technology', f.technology],
-                  ['Asset', f.asset],
                   ['Business Area', f.businessArea],
                   ['Priority', f.priority],
                   ['Progress', `${f.progress || 0}%`],

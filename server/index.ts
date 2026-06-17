@@ -14,6 +14,7 @@ import adminRoutes from './routes/admin';
 import approvalsRoutes from './routes/approvals';
 import filesRoutes from './routes/files';
 import servicesRoutes from './routes/services';
+import assetsRoutes from './routes/assets';
 import importRoutes from './routes/import';
 import bulkRoutes from './routes/bulk';
 import prisma from '../lib/prisma';
@@ -92,6 +93,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/files', filesRoutes);
 app.use('/api/services', servicesRoutes);
+app.use('/api/assets', assetsRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/bulk', bulkRoutes);
 

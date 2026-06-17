@@ -23,6 +23,7 @@ interface Finding {
   businessService: string;
   application: { name: string } | null;
   service: { id: string; name: string } | null;
+  assetRecord: { id: string; name: string; businessCriticality: string; environment: string; internetFacing: boolean } | null;
   technology: string;
   asset: string;
   owner: { name: string } | null;
@@ -48,6 +49,7 @@ interface Filters {
   owners: { id: string; name: string }[];
   services: { id: string; name: string; businessArea: string | null }[];
   managers: { id: string; name: string }[];
+  assets: { id: string; name: string; serviceId: string; businessCriticality: string }[];
 }
 
 export default function RegisterPage() {
@@ -96,8 +98,7 @@ export default function RegisterPage() {
       'CVSS Score': f.cvssScore,
       'Business Service': f.businessService,
       Application: f.application?.name,
-      Technology: f.technology,
-      Asset: f.asset,
+      Asset: f.assetRecord?.name || f.asset,
       Owner: f.owner?.name,
       Team: f.team?.name,
       Manager: f.manager?.name,
@@ -204,6 +205,14 @@ export default function RegisterPage() {
             <option value="">All Services</option>
             {filters.services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+          <select className="input" value={filterState.assetId || ''} onChange={(e) => setFilterState({ ...filterState, assetId: e.target.value })}>
+            <option value="">All Assets</option>
+            {filters.assets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          <select className="input" value={filterState.applicationId || ''} onChange={(e) => setFilterState({ ...filterState, applicationId: e.target.value })}>
+            <option value="">All Applications</option>
+            {filters.applications.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
           <select className="input" value={filterState.ownerId || ''} onChange={(e) => setFilterState({ ...filterState, ownerId: e.target.value })}>
             <option value="">All SMEs</option>
             {filters.owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -262,7 +271,7 @@ export default function RegisterPage() {
                       <input type="checkbox" checked={selected.size === findings.length && findings.length > 0} onChange={toggleAll} />
                     </th>
                   )}
-                  {['ID', 'Title', 'Service', 'Severity', 'CVSS', 'Owner', 'Status', 'Target', 'Days', 'Evidence'].map((h) => (
+                  {['ID', 'Title', 'Service', 'Asset', 'Severity', 'CVSS', 'Owner', 'Status', 'Target', 'Days', 'Evidence'].map((h) => (
                     <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">{h}</th>
                   ))}
                 </tr>
@@ -282,6 +291,7 @@ export default function RegisterPage() {
                     </td>
                     <td className="max-w-[200px] truncate px-4 py-3 font-medium">{f.title}</td>
                     <td className="px-4 py-3 text-xs">{f.service?.name || '—'}</td>
+                    <td className="px-4 py-3 text-xs">{f.assetRecord?.name || f.asset || '—'}</td>
                     <td className="px-4 py-3"><SeverityBadge severity={f.severity} /></td>
                     <td className="px-4 py-3 font-mono text-xs">{f.cvssScore.toFixed(1)}</td>
                     <td className="px-4 py-3 text-xs">{f.owner?.name || '—'}</td>

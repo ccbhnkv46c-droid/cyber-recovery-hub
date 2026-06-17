@@ -19,6 +19,7 @@ import { Prisma } from '@prisma/client';
 import { ACTIVITY_TYPES } from '../../lib/services';
 import { recordActivity, notifyFindingUpdate } from '../services/findings/activity';
 import { isAssignedOnlyRole } from '../../lib/rbac';
+import { resolveAssetForFinding } from './assets';
 
 const router = Router();
 
@@ -34,6 +35,23 @@ const findingInclude = {
   team: { select: { id: true, name: true, businessArea: true } },
   service: { select: { id: true, name: true, businessArea: true, criticality: true } },
   application: true,
+  assetRecord: {
+    select: {
+      id: true,
+      name: true,
+      assetType: true,
+      environment: true,
+      internetFacing: true,
+      businessCriticality: true,
+      dataClassification: true,
+      criticalService: true,
+      hostingLocation: true,
+      owner: true,
+      sme: { select: { id: true, name: true } },
+      technicalOwner: { select: { id: true, name: true } },
+      businessOwner: { select: { id: true, name: true } },
+    },
+  },
   evidence: { include: { user: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' as const } },
   comments: { include: { user: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: 'asc' as const } },
   activities: { include: { user: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: 'asc' as const } },
@@ -81,11 +99,14 @@ function buildWhereClause(req: AuthRequest, filters: Record<string, string>): Pr
   if (filters.severity) where.severity = filters.severity as Severity;
   if (filters.status) where.status = filters.status as FindingStatus;
   if (filters.serviceId) where.serviceId = filters.serviceId;
+  if (filters.assetId) where.assetId = filters.assetId;
   if (filters.service) where.service = { name: { contains: filters.service } };
   if (!isAssignedOnlyRole(user.role) && filters.ownerId) where.ownerId = filters.ownerId;
   if (!isAssignedOnlyRole(user.role) && filters.manager) where.manager = { name: { contains: filters.manager } };
   if (filters.critical === 'true') where.severity = 'CRITICAL';
   if (filters.application) where.application = { name: { contains: filters.application } };
+  if (filters.applicationId) where.applicationId = filters.applicationId;
+  if (filters.exposureLevel) where.exposureLevel = filters.exposureLevel;
   if (!isAssignedOnlyRole(user.role) && filters.owner) where.owner = { name: { contains: filters.owner } };
   if (filters.technology) where.technology = { contains: filters.technology };
   if (filters.businessArea) where.businessArea = filters.businessArea;
@@ -105,6 +126,7 @@ function buildWhereClause(req: AuthRequest, filters: Record<string, string>): Pr
       { title: { contains: filters.search } },
       { description: { contains: filters.search } },
       { asset: { contains: filters.search } },
+      { assetRecord: { name: { contains: filters.search } } },
     ];
   }
 
@@ -129,6 +151,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         team: { select: { id: true, name: true } },
         service: { select: { id: true, name: true } },
         application: { select: { id: true, name: true, businessService: true } },
+        assetRecord: { select: { id: true, name: true, businessCriticality: true, environment: true, internetFacing: true } },
         evidence: { select: { id: true } },
       },
       orderBy: [{ severity: 'asc' }, { targetDate: 'asc' }],
@@ -186,6 +209,13 @@ router.post('/', authMiddleware, requireRoles('ADMIN'), async (req: AuthRequest,
   const service = await prisma.service.findUnique({ where: { id: data.serviceId } });
   if (!service) return res.status(400).json({ error: 'Invalid serviceId' });
 
+  let assetLink = { assetId: null as string | null, assetName: data.asset as string | null, exposureLevel: data.exposureLevel as string | null };
+  try {
+    assetLink = await resolveAssetForFinding(data.assetId, data.asset, data.serviceId, data.applicationId);
+  } catch {
+    return res.status(400).json({ error: 'Invalid assetId' });
+  }
+
   const risk = calculateRiskScore({
     cvssScore: data.cvssScore || 5,
     exploitability: data.exploitability || 5,
@@ -215,9 +245,11 @@ router.post('/', authMiddleware, requireRoles('ADMIN'), async (req: AuthRequest,
       remediationPlan: data.remediationPlan,
       serviceId: data.serviceId,
       applicationId: data.applicationId,
+      assetId: assetLink.assetId,
+      exposureLevel: assetLink.exposureLevel || data.exposureLevel || null,
       businessService: data.businessService,
       technology: data.technology,
-      asset: data.asset,
+      asset: assetLink.assetName,
       businessArea: data.businessArea,
       ownerId: data.ownerId,
       assignedById: data.ownerId ? req.user!.id : undefined,
@@ -283,11 +315,13 @@ router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => 
   const adminFields = [
     ...smeFields,
     'title', 'description', 'severity', 'ownerId', 'managerId', 'businessOwnerId',
-    'teamId', 'targetDate', 'escalationLevel', 'serviceId', 'priority',
+    'teamId', 'targetDate', 'escalationLevel', 'serviceId', 'applicationId', 'assetId',
+    'exposureLevel', 'priority',
   ];
 
   const allowedFields = user.role === 'ADMIN' ? adminFields : isAssignedOnlyRole(user.role) ? smeFields : adminFields;
   for (const field of allowedFields) {
+    if (field === 'assetId') continue;
     if (data[field] !== undefined) {
       (updateData as Record<string, unknown>)[field] = data[field];
     }
@@ -314,6 +348,28 @@ router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => 
   if (data.requestExtension && data.newTargetDate) {
     updateData.targetDate = new Date(data.newTargetDate);
     updateData.nextAction = 'Extension requested - pending approval';
+  }
+
+  if (data.assetId !== undefined && user.role === 'ADMIN') {
+    const serviceId = (data.serviceId as string) || existing.serviceId;
+    try {
+      const assetLink = await resolveAssetForFinding(
+        data.assetId || undefined,
+        data.asset,
+        serviceId,
+        (data.applicationId as string) || existing.applicationId,
+      );
+      if (data.assetId) {
+        updateData.assetRecord = { connect: { id: assetLink.assetId! } };
+      } else {
+        updateData.assetRecord = { disconnect: true };
+      }
+      updateData.asset = assetLink.assetName;
+      if (assetLink.exposureLevel) updateData.exposureLevel = assetLink.exposureLevel;
+    } catch {
+      return res.status(400).json({ error: 'Invalid assetId' });
+    }
+    delete (updateData as Record<string, unknown>).assetId;
   }
 
   const finding = await prisma.finding.update({

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3,
-  Settings, LogOut, Moon, Sun, Bell, Menu, Bot, Building2, CheckSquare, Upload, Server, Mail, CheckCircle,
+  Settings, LogOut, Moon, Sun, Bell, Menu, Bot, Building2, CheckSquare, Upload, Server, Mail, CheckCircle, HardDrive,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore, useThemeStore, apiFetch } from '@/lib/store';
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { DebugPanel } from '@/components/layout/DebugPanel';
 
 const ICON_MAP = {
-  LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3, Bot, Building2, Settings, CheckSquare, Upload, Server, Bell, Mail, CheckCircle,
+  LayoutDashboard, List, UserCheck, AlertTriangle, BarChart3, Bot, Building2, Settings, CheckSquare, Upload, Server, Bell, Mail, CheckCircle, HardDrive,
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {

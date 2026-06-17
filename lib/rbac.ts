@@ -33,14 +33,16 @@ export type Permission =
   | 'admin'
   | 'manage_users'
   | 'manage_services'
+  | 'manage_assets'
+  | 'view_assets'
   | 'import'
   | 'email_outbox'
   | 'all';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   SECURITY_ANALYST: ['view_all', 'update', 'escalate', 'report', 'dashboard', 'comment'],
-  SME: ['view_assigned', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'comment', 'dashboard'],
-  ENGINEER: ['view_assigned', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'request_exception', 'comment', 'dashboard'],
+  SME: ['view_assigned', 'view_assets', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'comment', 'dashboard'],
+  ENGINEER: ['view_assigned', 'view_assets', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'request_exception', 'comment', 'dashboard'],
   TEAM_LEADER: ['view_team', 'approve_extension', 'review_overdue', 'comment', 'team_performance', 'dashboard'],
   ENGINEERING_MANAGER: ['view_org', 'sla_performance', 'review_escalations', 'approve_exceptions', 'dashboard', 'comment'],
   CISO: ['enterprise_dashboard', 'risk_heatmap', 'trends', 'overdue', 'org_performance', 'view_all', 'dashboard', 'report'],
@@ -89,6 +91,7 @@ export function canAccessRoute(role: string, path: string): boolean {
     '/findings': ['view_all', 'view_assigned', 'view_team', 'view_org'],
     '/approvals': ['approve_extension', 'approve_exceptions', 'review_overdue'],
     '/services': ['manage_services', 'view_all'],
+    '/assets': ['manage_assets', 'view_assets', 'view_all'],
     '/import': ['import', 'create'],
   };
 
@@ -111,6 +114,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/register', label: 'Vulnerability Register', icon: 'List', section: 'Operations' },
   { href: '/import', label: 'Import Vulnerabilities', icon: 'Upload', section: 'Operations' },
   { href: '/services', label: 'Services', icon: 'Server', section: 'Operations' },
+  { href: '/assets', label: 'Asset Register', icon: 'HardDrive', section: 'Operations' },
   { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle', section: 'Operations' },
   { href: '/approvals', label: 'Approvals', icon: 'CheckSquare', section: 'Operations' },
   { href: '/analytics', label: 'Reports', icon: 'BarChart3', section: 'Insights' },
@@ -128,11 +132,13 @@ const ROLE_NAV: Record<string, NavItem[]> = {
   ],
   SME: [
     { href: '/my-actions', label: 'My Dashboard', icon: 'UserCheck' },
+    { href: '/assets', label: 'My Assets', icon: 'HardDrive' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/settings', label: 'Settings', icon: 'Settings' },
   ],
   ENGINEER: [
     { href: '/my-actions', label: 'My Dashboard', icon: 'UserCheck' },
+    { href: '/assets', label: 'My Assets', icon: 'HardDrive' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/settings', label: 'Settings', icon: 'Settings' },
   ],

@@ -14,6 +14,7 @@ import { BRAND } from '@/lib/branding';
 import { Logo } from '@/components/branding/Logo';
 import {
   AlertTriangle, Shield, Clock, TrendingDown, CheckCircle, Target, Timer, Activity,
+  HardDrive, Globe, Server,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -41,6 +42,13 @@ interface ChartData {
   topPerformingTeams: { name: string; performance: number }[];
 }
 
+interface AssetExposure {
+  criticalAssetsWithOpenVulns: number;
+  internetFacingAssetsWithOpenVulns: number;
+  servicesWithHighestExposure: { name: string; open: number; critical: number }[];
+  assetsWithOverdueRemediation: number;
+}
+
 interface EnhancedAnalytics {
   openVsClosedTrend: { month: string; open: number; closed: number }[];
   bySeverity: { name: string; value: number }[];
@@ -60,6 +68,7 @@ export default function DashboardPage() {
   const [cards, setCards] = useState<DashboardData['cards'] | null>(null);
   const [charts, setCharts] = useState<ChartData | null>(null);
   const [enhanced, setEnhanced] = useState<EnhancedAnalytics | null>(null);
+  const [assetExposure, setAssetExposure] = useState<AssetExposure | null>(null);
   const [cisoData, setCisoData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState('');
@@ -72,6 +81,7 @@ export default function DashboardPage() {
       apiFetch<DashboardData>('/dashboard/executive'),
       apiFetch<ChartData>('/dashboard/charts'),
       apiFetch<EnhancedAnalytics>('/dashboard/analytics-enhanced'),
+      apiFetch<AssetExposure>('/dashboard/asset-exposure'),
     ];
     if (isCiso) requests.push(apiFetch('/dashboard/ciso'));
     if (isManager) requests.push(apiFetch('/dashboard/manager'));
@@ -83,9 +93,10 @@ export default function DashboardPage() {
       setCharts(results[1] as ChartData);
       const enhancedResult = results[2] as EnhancedAnalytics;
       setEnhanced(enhancedResult);
+      setAssetExposure(results[3] as AssetExposure);
       setLastUpdated(new Date(enhancedResult.updatedAt).toLocaleTimeString());
-      if (isCiso && results[3]) setCisoData(results[3] as Record<string, unknown>);
-      if (isManager) setCisoData((results[isCiso ? 4 : 3] as Record<string, unknown>) || null);
+      if (isCiso && results[4]) setCisoData(results[4] as Record<string, unknown>);
+      if (isManager) setCisoData((results[isCiso ? 5 : 4] as Record<string, unknown>) || null);
     } catch (e) {
       console.error(e);
     } finally {
@@ -172,6 +183,41 @@ export default function DashboardPage() {
         <MetricCard title="Mean Time To Remediate" value={`${cards?.mttr || 0}d`} icon={Timer} color="brand" />
         <MetricCard title="Risk Reduction" value={cards?.riskReductionThisMonth || 0} icon={TrendingDown} color="brand" subtitle="Closed this month" />
       </div>
+
+      {assetExposure && (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Critical Assets (Open Vulns)"
+            value={assetExposure.criticalAssetsWithOpenVulns}
+            icon={HardDrive}
+            color="red"
+            subtitle="Business-critical exposure"
+          />
+          <MetricCard
+            title="Internet-Facing Assets"
+            value={assetExposure.internetFacingAssetsWithOpenVulns}
+            icon={Globe}
+            color="orange"
+            subtitle="Externally exposed assets"
+          />
+          <MetricCard
+            title="Assets Overdue"
+            value={assetExposure.assetsWithOverdueRemediation}
+            icon={Clock}
+            color="red"
+            subtitle="Past remediation SLA"
+          />
+          <MetricCard
+            title="Top Service Exposure"
+            value={assetExposure.servicesWithHighestExposure[0]?.name || '—'}
+            icon={Server}
+            color="brand"
+            subtitle={assetExposure.servicesWithHighestExposure[0]
+              ? `${assetExposure.servicesWithHighestExposure[0].open} open vulnerabilities`
+              : 'No exposed services'}
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="card">
