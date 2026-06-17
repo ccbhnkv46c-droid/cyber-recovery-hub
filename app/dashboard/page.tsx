@@ -14,7 +14,7 @@ import { BRAND } from '@/lib/branding';
 import { Logo } from '@/components/branding/Logo';
 import {
   AlertTriangle, Shield, Clock, TrendingDown, CheckCircle, Target, Timer, Activity,
-  HardDrive, Globe, Server,
+  HardDrive, Globe, Server, Radar, ShieldAlert,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -49,6 +49,14 @@ interface AssetExposure {
   assetsWithOverdueRemediation: number;
 }
 
+interface ThreatIntelMetrics {
+  vulnerabilitiesWithActiveExploitation: number;
+  publicExploitAvailable: number;
+  ransomwareLinkedVulnerabilities: number;
+  criticalServicesAffectedByActiveThreats: number;
+  internetFacingAssetsWithActiveThreatIntel: number;
+}
+
 interface EnhancedAnalytics {
   openVsClosedTrend: { month: string; open: number; closed: number }[];
   bySeverity: { name: string; value: number }[];
@@ -69,6 +77,7 @@ export default function DashboardPage() {
   const [charts, setCharts] = useState<ChartData | null>(null);
   const [enhanced, setEnhanced] = useState<EnhancedAnalytics | null>(null);
   const [assetExposure, setAssetExposure] = useState<AssetExposure | null>(null);
+  const [threatMetrics, setThreatMetrics] = useState<ThreatIntelMetrics | null>(null);
   const [cisoData, setCisoData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState('');
@@ -82,6 +91,7 @@ export default function DashboardPage() {
       apiFetch<ChartData>('/dashboard/charts'),
       apiFetch<EnhancedAnalytics>('/dashboard/analytics-enhanced'),
       apiFetch<AssetExposure>('/dashboard/asset-exposure'),
+      apiFetch<ThreatIntelMetrics>('/dashboard/threat-intelligence'),
     ];
     if (isCiso) requests.push(apiFetch('/dashboard/ciso'));
     if (isManager) requests.push(apiFetch('/dashboard/manager'));
@@ -94,9 +104,10 @@ export default function DashboardPage() {
       const enhancedResult = results[2] as EnhancedAnalytics;
       setEnhanced(enhancedResult);
       setAssetExposure(results[3] as AssetExposure);
+      setThreatMetrics(results[4] as ThreatIntelMetrics);
       setLastUpdated(new Date(enhancedResult.updatedAt).toLocaleTimeString());
-      if (isCiso && results[4]) setCisoData(results[4] as Record<string, unknown>);
-      if (isManager) setCisoData((results[isCiso ? 5 : 4] as Record<string, unknown>) || null);
+      if (isCiso && results[5]) setCisoData(results[5] as Record<string, unknown>);
+      if (isManager) setCisoData((results[isCiso ? 6 : 5] as Record<string, unknown>) || null);
     } catch (e) {
       console.error(e);
     } finally {
@@ -215,6 +226,46 @@ export default function DashboardPage() {
             subtitle={assetExposure.servicesWithHighestExposure[0]
               ? `${assetExposure.servicesWithHighestExposure[0].open} open vulnerabilities`
               : 'No exposed services'}
+          />
+        </div>
+      )}
+
+      {threatMetrics && (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <MetricCard
+            title="Active Exploitation"
+            value={threatMetrics.vulnerabilitiesWithActiveExploitation}
+            icon={ShieldAlert}
+            color="red"
+            subtitle="Open vulns with active threat intel"
+          />
+          <MetricCard
+            title="Public Exploit Available"
+            value={threatMetrics.publicExploitAvailable}
+            icon={Radar}
+            color="orange"
+            subtitle="Exploit code in the wild"
+          />
+          <MetricCard
+            title="Ransomware Linked"
+            value={threatMetrics.ransomwareLinkedVulnerabilities}
+            icon={ShieldAlert}
+            color="purple"
+            subtitle="CVEs tied to ransomware"
+          />
+          <MetricCard
+            title="Critical Services at Risk"
+            value={threatMetrics.criticalServicesAffectedByActiveThreats}
+            icon={Server}
+            color="red"
+            subtitle="Active threats on critical services"
+          />
+          <MetricCard
+            title="Internet-Facing + Active Threat"
+            value={threatMetrics.internetFacingAssetsWithActiveThreatIntel}
+            icon={Globe}
+            color="orange"
+            subtitle="Externally exposed with active intel"
           />
         </div>
       )}

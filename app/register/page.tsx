@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
-import { PageHeader, LoadingSpinner, SeverityBadge, StatusBadge } from '@/components/ui';
+import { PageHeader, LoadingSpinner, SeverityBadge, StatusBadge, ThreatPriorityBadge, ThreatIntelBadge } from '@/components/ui';
 import { apiFetch } from '@/lib/store';
 import { cn, formatDate, slaStatusColor, escalationLabel } from '@/lib/utils';
 import { Search, Download, Filter, ChevronLeft, ChevronRight, FileText, UserPlus, CheckSquare } from 'lucide-react';
@@ -40,6 +40,9 @@ interface Finding {
   evidenceCount: number;
   riskAccepted: boolean;
   exceptionExpiry: string | null;
+  cve: string | null;
+  hasThreatMatch?: boolean;
+  threatPriority?: string | null;
 }
 
 interface Filters {
@@ -233,6 +236,32 @@ export default function RegisterPage() {
             <option value="">All Items</option>
             <option value="true">Overdue Only</option>
           </select>
+          <select className="input" value={filterState.threatMatched || ''} onChange={(e) => setFilterState({ ...filterState, threatMatched: e.target.value })}>
+            <option value="">All Threat Intel</option>
+            <option value="true">Threat Intel Matched</option>
+          </select>
+          <select className="input" value={filterState.activeExploitation || ''} onChange={(e) => setFilterState({ ...filterState, activeExploitation: e.target.value })}>
+            <option value="">Active Exploitation</option>
+            <option value="true">Actively Exploited</option>
+          </select>
+          <select className="input" value={filterState.publicExploit || ''} onChange={(e) => setFilterState({ ...filterState, publicExploit: e.target.value })}>
+            <option value="">Public Exploit</option>
+            <option value="true">Exploit Available</option>
+          </select>
+          <select className="input" value={filterState.ransomware || ''} onChange={(e) => setFilterState({ ...filterState, ransomware: e.target.value })}>
+            <option value="">Ransomware</option>
+            <option value="true">Ransomware Linked</option>
+          </select>
+          <select className="input" value={filterState.threatActor || ''} onChange={(e) => setFilterState({ ...filterState, threatActor: e.target.value })}>
+            <option value="">Threat Actor</option>
+            <option value="true">Actor Associated</option>
+          </select>
+          <select className="input" value={filterState.threatPriority || ''} onChange={(e) => setFilterState({ ...filterState, threatPriority: e.target.value })}>
+            <option value="">Threat Priority</option>
+            <option value="CRITICAL">Critical Threat Priority</option>
+            <option value="HIGH">High Threat Priority</option>
+            <option value="NORMAL">Normal Threat Priority</option>
+          </select>
           <select className="input" value={filterState.critical || ''} onChange={(e) => setFilterState({ ...filterState, critical: e.target.value })}>
             <option value="">All Severities</option>
             <option value="true">Critical Only</option>
@@ -271,7 +300,7 @@ export default function RegisterPage() {
                       <input type="checkbox" checked={selected.size === findings.length && findings.length > 0} onChange={toggleAll} />
                     </th>
                   )}
-                  {['ID', 'Title', 'Service', 'Asset', 'Severity', 'CVSS', 'Owner', 'Status', 'Target', 'Days', 'Evidence'].map((h) => (
+                  {['ID', 'Title', 'Service', 'Asset', 'Threat', 'Severity', 'CVSS', 'Owner', 'Status', 'Target', 'Days', 'Evidence'].map((h) => (
                     <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">{h}</th>
                   ))}
                 </tr>
@@ -292,6 +321,12 @@ export default function RegisterPage() {
                     <td className="max-w-[200px] truncate px-4 py-3 font-medium">{f.title}</td>
                     <td className="px-4 py-3 text-xs">{f.service?.name || '—'}</td>
                     <td className="px-4 py-3 text-xs">{f.assetRecord?.name || f.asset || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <ThreatIntelBadge matched={f.hasThreatMatch} />
+                        <ThreatPriorityBadge priority={f.threatPriority} />
+                      </div>
+                    </td>
                     <td className="px-4 py-3"><SeverityBadge severity={f.severity} /></td>
                     <td className="px-4 py-3 font-mono text-xs">{f.cvssScore.toFixed(1)}</td>
                     <td className="px-4 py-3 text-xs">{f.owner?.name || '—'}</td>

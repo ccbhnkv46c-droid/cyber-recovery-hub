@@ -164,6 +164,8 @@ model Finding {
   exposureLevel     String?
   businessArea      String?
 
+  cve               String?
+
   ownerId           String?
   owner             User?    @relation("FindingOwner", fields: [ownerId], references: [id])
   assignedById      String?
@@ -209,6 +211,25 @@ model Finding {
   auditLogs         AuditLog[]
   escalations       EscalationEvent[]
   notifications     Notification[]
+}
+
+model ThreatIntelligence {
+  id                     String   @id @default(uuid())
+  cve                    String   @unique
+  threatName             String
+  threatSource           String
+  activeExploitation     Boolean  @default(false)
+  publicExploitAvailable Boolean  @default(false)
+  ransomwareAssociated   Boolean  @default(false)
+  malwareAssociated      Boolean  @default(false)
+  threatActorAssociated  String?
+  exploitMaturity        String?
+  dateFirstSeen          DateTime?
+  intelligenceConfidence String   @default("MEDIUM")
+  sourceReference        String?
+  recommendedAction      String?
+  lastUpdated            DateTime @updatedAt
+  createdAt              DateTime @default(now())
 }
 
 model Activity {

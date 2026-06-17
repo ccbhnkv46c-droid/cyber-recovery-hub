@@ -1,4 +1,5 @@
 import { cn, severityColor, statusColor } from '@/lib/utils';
+import { THREAT_PRIORITY_COLORS, THREAT_PRIORITY_LABELS, ThreatPriority } from '@/lib/threat-intel';
 
 export function SeverityBadge({ severity }: { severity: string }) {
   return <span className={cn('badge', severityColor(severity))}>{severity}</span>;
@@ -10,6 +11,21 @@ export function StatusBadge({ status }: { status: string }) {
       {status.replace(/_/g, ' ')}
     </span>
   );
+}
+
+export function ThreatPriorityBadge({ priority }: { priority: ThreatPriority | string | null | undefined }) {
+  if (!priority) return null;
+  const p = priority as ThreatPriority;
+  return (
+    <span className={cn('badge border', THREAT_PRIORITY_COLORS[p] || THREAT_PRIORITY_COLORS.NORMAL)}>
+      {THREAT_PRIORITY_LABELS[p] || priority}
+    </span>
+  );
+}
+
+export function ThreatIntelBadge({ matched }: { matched?: boolean }) {
+  if (!matched) return null;
+  return <span className="badge bg-purple-500/15 text-purple-400">Threat Intel</span>;
 }
 
 export function MetricCard({

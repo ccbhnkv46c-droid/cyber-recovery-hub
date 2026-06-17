@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import {
   PageHeader, LoadingSpinner, SeverityBadge, StatusBadge, MetricCard,
+  ThreatPriorityBadge, ThreatIntelBadge,
 } from '@/components/ui';
 import { apiFetch, useAuthStore } from '@/lib/store';
 import { formatDate, formatDateTime, slaStatusColor, escalationLabel, cn } from '@/lib/utils';
@@ -192,6 +193,16 @@ export default function FindingDetailPage() {
     businessOwner: { name: string } | null;
   } | null;
   const businessOwner = f.businessOwner as { name: string } | undefined;
+  const threatIntelligence = f.threatIntelligence as {
+    cve: string; threatName: string; threatSource: string;
+    activeExploitation: boolean; publicExploitAvailable: boolean;
+    ransomwareAssociated: boolean; malwareAssociated: boolean;
+    threatActorAssociated: string | null; exploitMaturity: string | null;
+    intelligenceConfidence: string; sourceReference: string | null;
+    recommendedAction: string | null; dateFirstSeen: string | null; lastUpdated: string;
+  } | null;
+  const threatPriority = f.threatPriority as string | null;
+  const hasThreatMatch = f.hasThreatMatch as boolean;
   const activities = (f.activities as { id: string; type: string; content: string; createdAt: string; user: { name: string; role: string } | null }[]) || [];
   const discussion = (f.comments as { id: string; content: string; type: string; user: { name: string; role: string }; createdAt: string }[]) || [];
 
@@ -231,6 +242,8 @@ export default function FindingDetailPage() {
         <span className="badge border border-surface-300 dark:border-surface-700">
           Escalation: {escalationLabel(f.escalationLevel as string)}
         </span>
+        <ThreatIntelBadge matched={hasThreatMatch} />
+        <ThreatPriorityBadge priority={threatPriority} />
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -318,6 +331,45 @@ export default function FindingDetailPage() {
                 ))}
               </dl>
             </div>
+            {threatIntelligence && (
+              <div className="card border-purple-500/20 bg-purple-500/5">
+                <h3 className="mb-4 font-semibold">Threat Intelligence Context</h3>
+                <dl className="space-y-2 text-sm">
+                  {[
+                    ['CVE', threatIntelligence.cve],
+                    ['Threat', threatIntelligence.threatName],
+                    ['Source', threatIntelligence.threatSource],
+                    ['Confidence', threatIntelligence.intelligenceConfidence],
+                    ['Exploit Maturity', threatIntelligence.exploitMaturity],
+                    ['Threat Actor', threatIntelligence.threatActorAssociated],
+                    ['First Seen', threatIntelligence.dateFirstSeen ? formatDate(threatIntelligence.dateFirstSeen) : null],
+                  ].map(([k, v]) => (
+                    <div key={k as string} className="flex justify-between gap-4">
+                      <dt className="text-surface-500">{k as string}</dt>
+                      <dd className="text-right font-medium">{(v as string) || '—'}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {threatIntelligence.activeExploitation && <span className="badge bg-red-500/15 text-red-400">Actively Exploited</span>}
+                  {threatIntelligence.publicExploitAvailable && <span className="badge bg-orange-500/15 text-orange-400">Public Exploit</span>}
+                  {threatIntelligence.ransomwareAssociated && <span className="badge bg-purple-500/15 text-purple-400">Ransomware Linked</span>}
+                  {threatIntelligence.malwareAssociated && <span className="badge bg-yellow-500/15 text-yellow-400">Malware Associated</span>}
+                  {threatIntelligence.threatActorAssociated && <span className="badge bg-blue-500/15 text-blue-400">Threat Actor</span>}
+                </div>
+                {threatIntelligence.recommendedAction && (
+                  <div className="mt-4 rounded-lg border border-purple-500/20 bg-surface-900/5 p-3 dark:bg-surface-900/30">
+                    <p className="text-xs font-medium uppercase text-surface-500">Recommended Action</p>
+                    <p className="mt-1 text-sm">{threatIntelligence.recommendedAction}</p>
+                  </div>
+                )}
+                {threatIntelligence.sourceReference && (
+                  <p className="mt-3 text-xs text-surface-500">
+                    Reference: {threatIntelligence.sourceReference}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="card">
               <h3 className="mb-4 font-semibold">Asset & Service Context</h3>
               <dl className="space-y-2 text-sm">

@@ -3,6 +3,7 @@ import { Severity, EscalationLevel, FindingStatus, UserRole } from '../lib/const
 import bcrypt from 'bcryptjs';
 import { DEFAULT_SERVICES } from '../lib/services';
 import { deriveExposureLevel } from '../lib/assets';
+import { DEMO_THREAT_INTELLIGENCE } from '../lib/threat-intel';
 import { calculateRiskScore, calculateTargetDate, SLA_DAYS } from '../lib/constants';
 
 const prisma = new PrismaClient();
@@ -96,6 +97,7 @@ async function main() {
   await prisma.finding.deleteMany();
   await prisma.importBatch.deleteMany();
   await prisma.asset.deleteMany();
+  await prisma.threatIntelligence.deleteMany();
   await prisma.application.deleteMany();
   await prisma.service.deleteMany();
   await prisma.session.deleteMany();
@@ -305,6 +307,18 @@ async function main() {
     }
   }
 
+  await Promise.all(
+    DEMO_THREAT_INTELLIGENCE.map((demo) =>
+      prisma.threatIntelligence.create({
+        data: {
+          ...demo,
+          cve: demo.cve.toUpperCase(),
+          dateFirstSeen: new Date(Date.now() - Math.floor(Math.random() * 400) * 86400000),
+        },
+      })
+    )
+  );
+
   const severities: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
   const severityWeights = [0.08, 0.22, 0.40, 0.30];
   const statuses: FindingStatus[] = ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'PENDING_REVIEW', 'PENDING_EXCEPTION', 'RISK_ACCEPTED', 'REMEDIATED', 'CLOSED'];
@@ -320,6 +334,8 @@ async function main() {
     }
     return items[items.length - 1];
   }
+
+  const demoCves = DEMO_THREAT_INTELLIGENCE.map((d) => d.cve.toUpperCase());
 
   const findings = [];
   for (let i = 1; i <= 520; i++) {
@@ -355,6 +371,7 @@ async function main() {
     const linkedAsset = appAssets.length ? random(appAssets) : assets[Math.floor(Math.random() * assets.length)];
     const exposureLevel = deriveExposureLevel(linkedAsset.internetFacing, linkedAsset.environment);
     const assignedAt = randomDate(90);
+    const cve = i <= demoCves.length * 12 ? demoCves[(i - 1) % demoCves.length] : null;
 
     // Assignment model: 200 unassigned (admin assigns), rest split across 4 SMEs
     let ownerId: string | null = null;
@@ -397,6 +414,7 @@ async function main() {
         businessService: app.businessService,
         technology,
         asset: linkedAsset.name,
+        cve,
         businessArea: app.businessArea,
         ownerId,
         assignedById,
@@ -523,7 +541,7 @@ async function main() {
     });
   }
 
-  console.log(`Seeded: ${services.length} services, ${assets.length} assets, ${smeUsers.length} SMEs, ${teams.length} teams, ${engineers.length + managers.length + leaders.length + 7} users, ${apps.length} applications, ${findings.length} findings (${findings.filter((f) => !f.ownerId).length} unassigned)`);
+  console.log(`Seeded: ${services.length} services, ${assets.length} assets, ${DEMO_THREAT_INTELLIGENCE.length} threat intel records, ${smeUsers.length} SMEs, ${teams.length} teams, ${engineers.length + managers.length + leaders.length + 7} users, ${apps.length} applications, ${findings.length} findings (${findings.filter((f) => !f.ownerId).length} unassigned)`);
 }
 
 main()

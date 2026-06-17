@@ -20,6 +20,12 @@ import { ACTIVITY_TYPES } from '../../lib/services';
 import { recordActivity, notifyFindingUpdate } from '../services/findings/activity';
 import { isAssignedOnlyRole } from '../../lib/rbac';
 import { resolveAssetForFinding } from './assets';
+import {
+  loadThreatIntelMap,
+  enrichFindingWithThreat,
+  applyThreatFiltersToWhere,
+} from '../services/threat-intel/enrichment';
+import { normalizeCve } from '../../lib/threat-intel';
 
 const router = Router();
 
@@ -60,20 +66,24 @@ const findingInclude = {
   escalations: { orderBy: { createdAt: 'desc' as const }, take: 20 },
 };
 
-function enrichFinding(finding: Record<string, unknown>) {
+function enrichFinding(finding: Record<string, unknown>, threatMap?: ReturnType<typeof loadThreatIntelMap> extends Promise<infer M> ? M : never) {
   const targetDate = finding.targetDate as Date;
   const severity = finding.severity as Severity;
   const status = finding.status as FindingStatus;
   const daysRemaining = getDaysRemaining(targetDate);
   const slaStatus = getSlaStatus(targetDate, severity);
   const overdue = isOverdue(targetDate, status);
-  return {
+  const base = {
     ...finding,
     daysRemaining,
     slaStatus,
     isOverdue: overdue,
     evidenceCount: (finding.evidence as unknown[])?.length || 0,
   };
+  if (threatMap) {
+    return enrichFindingWithThreat(base, threatMap);
+  }
+  return base;
 }
 
 function buildWhereClause(req: AuthRequest, filters: Record<string, string>): Prisma.FindingWhereInput {
@@ -127,9 +137,16 @@ function buildWhereClause(req: AuthRequest, filters: Record<string, string>): Pr
       { description: { contains: filters.search } },
       { asset: { contains: filters.search } },
       { assetRecord: { name: { contains: filters.search } } },
+      { cve: { contains: filters.search } },
     ];
   }
 
+  return where;
+}
+
+async function buildWhereWithThreatFilters(req: AuthRequest, filters: Record<string, string>) {
+  const where = buildWhereClause(req, filters);
+  await applyThreatFiltersToWhere(where, filters);
   return where;
 }
 
@@ -139,7 +156,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const limit = parseInt(filters.limit || '50');
   const skip = (page - 1) * limit;
 
-  const where = buildWhereClause(req, filters);
+  const where = await buildWhereWithThreatFilters(req, filters);
+
+  const threatMap = await loadThreatIntelMap();
 
   const [findings, total] = await Promise.all([
     prisma.finding.findMany({
@@ -162,7 +181,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   ]);
 
   res.json({
-    findings: findings.map(enrichFinding),
+    findings: findings.map((f) => enrichFinding(f, threatMap)),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 });
@@ -189,13 +208,15 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     return res.status(403).json({ error: 'Access denied — finding outside your team' });
   }
 
-  const result = enrichFinding(finding);
+  const threatMap = await loadThreatIntelMap();
+  const enriched = enrichFinding(finding as Record<string, unknown>, threatMap);
+
   if (isAssignedOnlyRole(req.user!.role)) {
-    const { auditLogs, ...smeView } = result as Record<string, unknown> & { auditLogs?: unknown };
+    const { auditLogs, ...smeView } = enriched as Record<string, unknown> & { auditLogs?: unknown };
     return res.json(smeView);
   }
 
-  res.json(result);
+  res.json(enriched);
 });
 
 router.post('/', authMiddleware, requireRoles('ADMIN'), async (req: AuthRequest, res: Response) => {
@@ -250,6 +271,7 @@ router.post('/', authMiddleware, requireRoles('ADMIN'), async (req: AuthRequest,
       businessService: data.businessService,
       technology: data.technology,
       asset: assetLink.assetName,
+      cve: normalizeCve(data.cve),
       businessArea: data.businessArea,
       ownerId: data.ownerId,
       assignedById: data.ownerId ? req.user!.id : undefined,
@@ -294,7 +316,7 @@ router.post('/', authMiddleware, requireRoles('ADMIN'), async (req: AuthRequest,
     ipAddress: req.ip,
   });
 
-  res.status(201).json(enrichFinding(finding));
+  res.status(201).json(enrichFinding(finding as Record<string, unknown>, await loadThreatIntelMap()));
 });
 
 router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -316,14 +338,18 @@ router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => 
     ...smeFields,
     'title', 'description', 'severity', 'ownerId', 'managerId', 'businessOwnerId',
     'teamId', 'targetDate', 'escalationLevel', 'serviceId', 'applicationId', 'assetId',
-    'exposureLevel', 'priority',
+    'exposureLevel', 'cve', 'priority',
   ];
 
   const allowedFields = user.role === 'ADMIN' ? adminFields : isAssignedOnlyRole(user.role) ? smeFields : adminFields;
   for (const field of allowedFields) {
     if (field === 'assetId') continue;
     if (data[field] !== undefined) {
-      (updateData as Record<string, unknown>)[field] = data[field];
+      if (field === 'cve') {
+        (updateData as Record<string, unknown>).cve = normalizeCve(data.cve);
+      } else {
+        (updateData as Record<string, unknown>)[field] = data[field];
+      }
     }
   }
 
@@ -426,7 +452,7 @@ router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => 
 
   await notifyFindingUpdate(finding.id, user.id, data.nextSteps || data.nextAction);
 
-  res.json(enrichFinding(finding));
+  res.json(enrichFinding(finding as Record<string, unknown>, await loadThreatIntelMap()));
 });
 
 router.post('/:id/comments', authMiddleware, async (req: AuthRequest, res: Response) => {

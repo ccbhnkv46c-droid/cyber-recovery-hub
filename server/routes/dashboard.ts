@@ -11,6 +11,7 @@ import {
 } from '../../lib/constants';
 import { authMiddleware, AuthRequest, requireRoles } from '../middleware/auth';
 import { isAssignedOnlyRole } from '../../lib/rbac';
+import { computeThreatDashboardMetrics } from '../services/threat-intel/enrichment';
 
 const router = Router();
 
@@ -125,6 +126,20 @@ router.get('/asset-exposure', authMiddleware, async (req: AuthRequest, res: Resp
     servicesWithHighestExposure,
     assetsWithOverdueRemediation,
   });
+});
+
+router.get('/threat-intelligence', authMiddleware, async (req: AuthRequest, res: Response) => {
+  let roleScopedWhere = {};
+  if (isAssignedOnlyRole(req.user!.role)) {
+    roleScopedWhere = { ownerId: req.user!.id };
+  } else if (req.user!.role === 'TEAM_LEADER' && req.user!.teamId) {
+    roleScopedWhere = { teamId: req.user!.teamId };
+  } else if (req.user!.role === 'ENGINEERING_MANAGER' && req.user!.department) {
+    roleScopedWhere = { businessArea: req.user!.department };
+  }
+
+  const metrics = await computeThreatDashboardMetrics(roleScopedWhere);
+  res.json(metrics);
 });
 
 router.get('/charts', authMiddleware, async (_req: AuthRequest, res: Response) => {
