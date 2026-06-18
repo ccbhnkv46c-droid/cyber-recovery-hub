@@ -22,9 +22,14 @@ import { isAssignedOnlyRole } from '../../lib/rbac';
 import { resolveAssetForFinding } from './assets';
 import {
   loadThreatIntelMap,
-  enrichFindingWithThreat,
   applyThreatFiltersToWhere,
 } from '../services/threat-intel/enrichment';
+import {
+  enrichFindingWithRisk,
+  applyRiskFilters,
+  sortByRiskScore,
+  EnrichedFinding,
+} from '../services/risk/enrichment';
 import { normalizeCve } from '../../lib/threat-intel';
 
 const router = Router();
@@ -81,7 +86,7 @@ function enrichFinding(finding: Record<string, unknown>, threatMap?: ReturnType<
     evidenceCount: (finding.evidence as unknown[])?.length || 0,
   };
   if (threatMap) {
-    return enrichFindingWithThreat(base, threatMap);
+    return enrichFindingWithRisk(base, threatMap);
   }
   return base;
 }
@@ -160,28 +165,33 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
   const threatMap = await loadThreatIntelMap();
 
-  const [findings, total] = await Promise.all([
-    prisma.finding.findMany({
-      where,
-      include: {
-        owner: { select: { id: true, name: true } },
-        manager: { select: { id: true, name: true } },
-        businessOwner: { select: { id: true, name: true } },
-        team: { select: { id: true, name: true } },
-        service: { select: { id: true, name: true } },
-        application: { select: { id: true, name: true, businessService: true } },
-        assetRecord: { select: { id: true, name: true, businessCriticality: true, environment: true, internetFacing: true } },
-        evidence: { select: { id: true } },
+  const raw = await prisma.finding.findMany({
+    where,
+    include: {
+      owner: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true } },
+      businessOwner: { select: { id: true, name: true } },
+      team: { select: { id: true, name: true } },
+      service: { select: { id: true, name: true } },
+      application: { select: { id: true, name: true, businessService: true } },
+      assetRecord: {
+        select: {
+          id: true, name: true, businessCriticality: true, environment: true,
+          internetFacing: true, criticalService: true, dataClassification: true,
+        },
       },
-      orderBy: [{ severity: 'asc' }, { targetDate: 'asc' }],
-      skip,
-      take: limit,
-    }),
-    prisma.finding.count({ where }),
-  ]);
+      evidence: { select: { id: true } },
+    },
+  });
+
+  let enriched = raw.map((f) => enrichFinding(f as Record<string, unknown>, threatMap)) as EnrichedFinding[];
+  enriched = applyRiskFilters(enriched, filters);
+  enriched = sortByRiskScore(enriched);
+  const total = enriched.length;
+  const paginated = enriched.slice(skip, skip + limit);
 
   res.json({
-    findings: findings.map((f) => enrichFinding(f, threatMap)),
+    findings: paginated,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 });

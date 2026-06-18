@@ -80,6 +80,17 @@ describe('RBAC', () => {
     expect(hasPermission('SME', 'manage_threat_intel')).toBe(false);
   });
 
+  it('allows SME access to risk prioritisation for assigned findings', () => {
+    expect(canAccessRoute('SME', '/risk-prioritisation')).toBe(true);
+    expect(hasPermission('SME', 'view_risk_prioritisation')).toBe(true);
+    expect(hasPermission('SME', 'export_risk_queue')).toBe(false);
+  });
+
+  it('allows ADMIN risk prioritisation and export', () => {
+    expect(canAccessRoute('ADMIN', '/risk-prioritisation')).toBe(true);
+    expect(getNavForRole('ADMIN').some((n) => n.href === '/risk-prioritisation')).toBe(true);
+  });
+
   it('returns full admin navigation', () => {
     const adminNav = getNavForRole('ADMIN');
     expect(adminNav.length).toBeGreaterThanOrEqual(10);

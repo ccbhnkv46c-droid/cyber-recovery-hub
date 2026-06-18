@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
-import { PageHeader, LoadingSpinner, SeverityBadge, StatusBadge, ThreatPriorityBadge, ThreatIntelBadge } from '@/components/ui';
+import { PageHeader, LoadingSpinner, SeverityBadge, StatusBadge, ThreatPriorityBadge, ThreatIntelBadge, RiskRatingBadge } from '@/components/ui';
 import { apiFetch } from '@/lib/store';
 import { cn, formatDate, slaStatusColor, escalationLabel } from '@/lib/utils';
 import { Search, Download, Filter, ChevronLeft, ChevronRight, FileText, UserPlus, CheckSquare } from 'lucide-react';
@@ -12,6 +12,8 @@ import { exportFindingsPDF } from '@/lib/export';
 import { toast } from '@/lib/toast';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useAuthStore } from '@/lib/store';
+import { EXPOSURE_LABELS } from '@/lib/assets';
+import { RISK_RATINGS } from '@/lib/risk-scoring';
 import { canAssignWork } from '@/lib/rbac';
 
 interface Finding {
@@ -43,6 +45,10 @@ interface Finding {
   cve: string | null;
   hasThreatMatch?: boolean;
   threatPriority?: string | null;
+  exposureRiskScore?: number;
+  exposureRiskRating?: string;
+  exposureRiskReason?: string;
+  exposureLevel?: string | null;
 }
 
 interface Filters {
@@ -112,7 +118,12 @@ export default function RegisterPage() {
       'Days Remaining': f.daysRemaining,
       'Escalation Level': escalationLabel(f.escalationLevel),
       'Next Action': f.nextAction,
-      'Risk Accepted': f.riskAccepted ? 'Yes' : 'No',
+      'Risk Score': f.exposureRiskScore,
+      'Risk Rating': f.exposureRiskRating,
+      'Risk Reason': f.exposureRiskReason,
+      'Threat Priority': f.threatPriority,
+      'Asset Criticality': f.assetRecord?.businessCriticality,
+      'Exposure Level': f.exposureLevel,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -262,6 +273,22 @@ export default function RegisterPage() {
             <option value="HIGH">High Threat Priority</option>
             <option value="NORMAL">Normal Threat Priority</option>
           </select>
+          <select className="input" value={filterState.riskRating || ''} onChange={(e) => setFilterState({ ...filterState, riskRating: e.target.value })}>
+            <option value="">All Risk Ratings</option>
+            {RISK_RATINGS.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select className="input" value={filterState.businessCriticality || ''} onChange={(e) => setFilterState({ ...filterState, businessCriticality: e.target.value })}>
+            <option value="">Asset Criticality</option>
+            {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select className="input" value={filterState.internetFacing || ''} onChange={(e) => setFilterState({ ...filterState, internetFacing: e.target.value })}>
+            <option value="">Internet Facing</option>
+            <option value="true">Internet Facing</option>
+          </select>
+          <select className="input" value={filterState.criticalService || ''} onChange={(e) => setFilterState({ ...filterState, criticalService: e.target.value })}>
+            <option value="">Critical Service</option>
+            <option value="true">Critical Service</option>
+          </select>
           <select className="input" value={filterState.critical || ''} onChange={(e) => setFilterState({ ...filterState, critical: e.target.value })}>
             <option value="">All Severities</option>
             <option value="true">Critical Only</option>
@@ -300,7 +327,7 @@ export default function RegisterPage() {
                       <input type="checkbox" checked={selected.size === findings.length && findings.length > 0} onChange={toggleAll} />
                     </th>
                   )}
-                  {['ID', 'Title', 'Service', 'Asset', 'Threat', 'Severity', 'CVSS', 'Owner', 'Status', 'Target', 'Days', 'Evidence'].map((h) => (
+                  {['ID', 'Title', 'Service', 'Asset', 'Risk', 'Rating', 'Reason', 'Threat', 'Severity', 'CVSS', 'Crit.', 'Exposure', 'Owner', 'Status', 'Target', 'Days', 'Evidence'].map((h) => (
                     <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">{h}</th>
                   ))}
                 </tr>
@@ -321,6 +348,9 @@ export default function RegisterPage() {
                     <td className="max-w-[200px] truncate px-4 py-3 font-medium">{f.title}</td>
                     <td className="px-4 py-3 text-xs">{f.service?.name || '—'}</td>
                     <td className="px-4 py-3 text-xs">{f.assetRecord?.name || f.asset || '—'}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-bold">{f.exposureRiskScore ?? '—'}</td>
+                    <td className="px-4 py-3"><RiskRatingBadge rating={f.exposureRiskRating} /></td>
+                    <td className="max-w-[160px] truncate px-4 py-3 text-xs text-surface-500" title={f.exposureRiskReason}>{f.exposureRiskReason || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <ThreatIntelBadge matched={f.hasThreatMatch} />
@@ -329,6 +359,8 @@ export default function RegisterPage() {
                     </td>
                     <td className="px-4 py-3"><SeverityBadge severity={f.severity} /></td>
                     <td className="px-4 py-3 font-mono text-xs">{f.cvssScore.toFixed(1)}</td>
+                    <td className="px-4 py-3 text-xs">{f.assetRecord?.businessCriticality || '—'}</td>
+                    <td className="px-4 py-3 text-xs">{f.exposureLevel ? (EXPOSURE_LABELS[f.exposureLevel] || f.exposureLevel) : '—'}</td>
                     <td className="px-4 py-3 text-xs">{f.owner?.name || '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={f.status} /></td>
                     <td className="px-4 py-3 text-xs">{formatDate(f.targetDate)}</td>

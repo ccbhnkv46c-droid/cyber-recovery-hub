@@ -11,7 +11,8 @@ import {
 } from '../../lib/constants';
 import { authMiddleware, AuthRequest, requireRoles } from '../middleware/auth';
 import { isAssignedOnlyRole } from '../../lib/rbac';
-import { computeThreatDashboardMetrics } from '../services/threat-intel/enrichment';
+import { computeThreatDashboardMetrics, loadThreatIntelMap } from '../services/threat-intel/enrichment';
+import { computeRiskDashboardMetrics, buildRoleScopedWhere, enrichFindingWithRisk } from '../services/risk/enrichment';
 
 const router = Router();
 
@@ -126,6 +127,12 @@ router.get('/asset-exposure', authMiddleware, async (req: AuthRequest, res: Resp
     servicesWithHighestExposure,
     assetsWithOverdueRemediation,
   });
+});
+
+router.get('/risk-exposure', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const where = buildRoleScopedWhere(req.user!);
+  const metrics = await computeRiskDashboardMetrics(where);
+  res.json(metrics);
 });
 
 router.get('/threat-intelligence', authMiddleware, async (req: AuthRequest, res: Response) => {
@@ -371,7 +378,15 @@ router.get('/engineer-portal', authMiddleware, async (req: AuthRequest, res: Res
     team: { select: { name: true } },
     service: { select: { id: true, name: true } },
     assignedBy: { select: { name: true } },
+    assetRecord: {
+      select: {
+        id: true, name: true, businessCriticality: true, environment: true,
+        internetFacing: true, criticalService: true, dataClassification: true,
+      },
+    },
   };
+
+  const threatMap = await loadThreatIntelMap();
 
   const [myFindings, overdue, dueThisWeek, blocked, critical, high, recentlyUpdated] = await Promise.all([
     prisma.finding.findMany({
@@ -402,13 +417,18 @@ router.get('/engineer-portal', authMiddleware, async (req: AuthRequest, res: Res
     }),
   ]);
 
-  const enrich = <T extends { targetDate: Date }>(f: T) => ({
-    ...f,
-    daysRemaining: getDaysRemaining(f.targetDate),
-    slaStatus: getDaysRemaining(f.targetDate) < 0 ? 'overdue'
-      : getDaysRemaining(f.targetDate) <= 3 ? 'red'
-      : getDaysRemaining(f.targetDate) <= 7 ? 'amber' : 'green',
-  });
+  const enrich = <T extends { targetDate: Date; status: string }>(f: T) => {
+    const daysRemaining = getDaysRemaining(f.targetDate);
+    const base = {
+      ...f,
+      daysRemaining,
+      slaStatus: daysRemaining < 0 ? 'overdue'
+        : daysRemaining <= 3 ? 'red'
+        : daysRemaining <= 7 ? 'amber' : 'green',
+      isOverdue: isOverdue(f.targetDate, f.status as FindingStatus),
+    };
+    return enrichFindingWithRisk(base as Record<string, unknown>, threatMap);
+  };
 
   res.json({
     myFindings: myFindings.map(enrich),

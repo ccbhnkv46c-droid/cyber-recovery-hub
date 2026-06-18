@@ -442,6 +442,157 @@ async function main() {
     findings.push(finding);
   }
 
+  // Phase 3: curated risk showcase scenarios
+  const paymentApp = apps.find((a) => a.name === 'Payment Gateway')!;
+  const hrApp = apps.find((a) => a.name === 'HR Management System')!;
+  const mobileApp = apps.find((a) => a.name === 'Mobile Banking App')!;
+  const paymentServiceId = pickService('Node.js');
+
+  const [criticalInternetAsset, internalLowAsset, criticalBusinessAsset] = await Promise.all([
+    prisma.asset.create({
+      data: {
+        name: 'payment-gateway-prod-edge-1',
+        assetType: 'Application',
+        environment: 'PRODUCTION',
+        internetFacing: true,
+        criticalService: true,
+        dataClassification: 'Restricted',
+        businessCriticality: 'CRITICAL',
+        hostingLocation: 'AWS eu-west-2',
+        owner: 'Payments Operations',
+        serviceId: paymentServiceId,
+        applicationId: paymentApp.id,
+        smeId: smeUsers[0]?.id,
+      },
+    }),
+    prisma.asset.create({
+      data: {
+        name: 'hr-mgmt-dev-internal-1',
+        assetType: 'Server',
+        environment: 'DEVELOPMENT',
+        internetFacing: false,
+        criticalService: false,
+        dataClassification: 'Internal',
+        businessCriticality: 'LOW',
+        hostingLocation: 'On-Premise DMZ',
+        owner: 'HR IT',
+        serviceId: pickService('SAP'),
+        applicationId: hrApp.id,
+      },
+    }),
+    prisma.asset.create({
+      data: {
+        name: 'mobile-banking-prod-api-1',
+        assetType: 'Application',
+        environment: 'PRODUCTION',
+        internetFacing: true,
+        criticalService: true,
+        dataClassification: 'Customer',
+        businessCriticality: 'CRITICAL',
+        hostingLocation: 'AWS eu-west-2',
+        owner: 'Retail Digital',
+        serviceId: pickService('React Native'),
+        applicationId: mobileApp.id,
+        smeId: smeUsers[1]?.id,
+      },
+    }),
+  ]);
+
+  const overdueTarget = new Date();
+  overdueTarget.setDate(overdueTarget.getDate() - 45);
+  const oldCreated = new Date();
+  oldCreated.setDate(oldCreated.getDate() - 120);
+
+  const showcaseUpdates = [
+    {
+      finding: findings[0],
+      data: {
+        title: 'PAN-OS command injection on internet-facing payment gateway',
+        severity: 'CRITICAL' as Severity,
+        cvssScore: 9.8,
+        cve: 'CVE-2024-3400',
+        status: 'IN_PROGRESS' as FindingStatus,
+        assetId: criticalInternetAsset.id,
+        exposureLevel: deriveExposureLevel(true, 'PRODUCTION'),
+        targetDate: overdueTarget,
+        createdAt: oldCreated,
+        ownerId: smeUsers[0]?.id,
+      },
+    },
+    {
+      finding: findings[1],
+      data: {
+        title: 'High CVSS buffer overflow on internal HR dev server',
+        severity: 'CRITICAL' as Severity,
+        cvssScore: 9.8,
+        cve: null,
+        status: 'OPEN' as FindingStatus,
+        assetId: internalLowAsset.id,
+        exposureLevel: deriveExposureLevel(false, 'DEVELOPMENT'),
+        targetDate: calculateTargetDate('CRITICAL', new Date()),
+      },
+    },
+    {
+      finding: findings[2],
+      data: {
+        title: 'Medium CVSS auth bypass on critical mobile banking API',
+        severity: 'MEDIUM' as Severity,
+        cvssScore: 5.4,
+        cve: null,
+        status: 'OPEN' as FindingStatus,
+        assetId: criticalBusinessAsset.id,
+        exposureLevel: deriveExposureLevel(true, 'PRODUCTION'),
+        targetDate: calculateTargetDate('MEDIUM', new Date()),
+      },
+    },
+    {
+      finding: findings[3],
+      data: {
+        title: 'Internet-facing Log4Shell exposure on customer portal',
+        severity: 'HIGH' as Severity,
+        cvssScore: 8.1,
+        cve: 'CVE-2021-44228',
+        status: 'IN_PROGRESS' as FindingStatus,
+        assetId: criticalInternetAsset.id,
+        exposureLevel: 'INTERNET_FACING',
+        ownerId: smeUsers[0]?.id,
+      },
+    },
+    {
+      finding: findings[4],
+      data: {
+        title: 'Citrix Bleed session hijack on VPN edge (ransomware-linked)',
+        severity: 'HIGH' as Severity,
+        cvssScore: 7.5,
+        cve: 'CVE-2023-4966',
+        status: 'OPEN' as FindingStatus,
+        assetId: criticalInternetAsset.id,
+        exposureLevel: 'INTERNET_FACING',
+        ownerId: smeUsers[1]?.id,
+      },
+    },
+    {
+      finding: findings[5],
+      data: {
+        title: 'Overdue critical patch on core payment processing node',
+        severity: 'CRITICAL' as Severity,
+        cvssScore: 9.1,
+        cve: 'CVE-2023-23397',
+        status: 'BLOCKED' as FindingStatus,
+        assetId: criticalBusinessAsset.id,
+        exposureLevel: deriveExposureLevel(true, 'PRODUCTION'),
+        targetDate: overdueTarget,
+        createdAt: oldCreated,
+        blockerReason: 'Change freeze — emergency CAB required',
+        ownerId: smeUsers[0]?.id,
+      },
+    },
+  ];
+
+  for (const { finding, data } of showcaseUpdates) {
+    await prisma.finding.update({ where: { id: finding.id }, data });
+  }
+
   if (analyst) {
     for (let i = 0; i < 20; i++) {
       await prisma.auditLog.create({

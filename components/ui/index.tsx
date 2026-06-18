@@ -1,5 +1,6 @@
 import { cn, severityColor, statusColor } from '@/lib/utils';
 import { THREAT_PRIORITY_COLORS, THREAT_PRIORITY_LABELS, ThreatPriority } from '@/lib/threat-intel';
+import { RISK_RATING_COLORS, RiskRating } from '@/lib/risk-scoring';
 
 export function SeverityBadge({ severity }: { severity: string }) {
   return <span className={cn('badge', severityColor(severity))}>{severity}</span>;
@@ -26,6 +27,16 @@ export function ThreatPriorityBadge({ priority }: { priority: ThreatPriority | s
 export function ThreatIntelBadge({ matched }: { matched?: boolean }) {
   if (!matched) return null;
   return <span className="badge bg-purple-500/15 text-purple-400">Threat Intel</span>;
+}
+
+export function RiskRatingBadge({ rating, score }: { rating?: RiskRating | string | null; score?: number | null }) {
+  if (!rating) return null;
+  const r = rating as RiskRating;
+  return (
+    <span className={cn('badge', RISK_RATING_COLORS[r] || RISK_RATING_COLORS.Low)}>
+      {score != null ? `${rating} (${score})` : rating}
+    </span>
+  );
 }
 
 export function MetricCard({

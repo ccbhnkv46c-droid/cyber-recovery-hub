@@ -3,19 +3,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
-import { PageHeader, MetricCard } from '@/components/ui';
+import { PageHeader, MetricCard, RiskRatingBadge } from '@/components/ui';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { apiFetch } from '@/lib/store';
 import { usePolling } from '@/lib/hooks/usePolling';
 import { cn, formatDate, slaStatusColor } from '@/lib/utils';
 import { Clock, AlertTriangle, Calendar, Shield, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react';
 
-type QueueTab = 'all' | 'critical' | 'high' | 'overdue' | 'due-week' | 'recent';
+type QueueTab = 'all' | 'critical' | 'high' | 'overdue' | 'due-week' | 'recent' | 'critical-risk' | 'high-risk' | 'active-exploit';
 
 export default function MyActionsPage() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<QueueTab>('all');
+  const [riskFilter, setRiskFilter] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
 
   const loadData = useCallback(async () => {
@@ -64,19 +65,34 @@ export default function MyActionsPage() {
         });
       case 'recent':
         return portal.recentlyUpdated;
+      case 'critical-risk':
+        return portal.myFindings.filter((f) => f.exposureRiskRating === 'Critical');
+      case 'high-risk':
+        return portal.myFindings.filter((f) => f.exposureRiskRating === 'High');
+      case 'active-exploit':
+        return portal.myFindings.filter((f) => (f.threatIntelligence as { activeExploitation?: boolean } | null)?.activeExploitation);
       default:
         return portal.myFindings;
     }
   };
 
-  const displayed = getFiltered();
+  const riskFiltered = getFiltered().filter((f) => {
+    if (!riskFilter) return true;
+    if (riskFilter === 'overdue') return (f.daysRemaining as number) < 0;
+    if (riskFilter === 'critical-service') return (f.assetRecord as { criticalService?: boolean })?.criticalService;
+    return f.exposureRiskRating === riskFilter;
+  });
+
+  const displayed = riskFiltered;
   const tabs: { id: QueueTab; label: string; count: number }[] = [
     { id: 'all', label: 'My Open Tasks', count: portal.openCount },
     { id: 'critical', label: 'Critical', count: portal.critical },
     { id: 'high', label: 'High', count: portal.high },
     { id: 'overdue', label: 'Overdue', count: portal.overdue },
     { id: 'due-week', label: 'Due This Week', count: portal.dueThisWeek },
-    { id: 'recent', label: 'Recently Updated', count: portal.recentlyUpdated.length },
+    { id: 'critical-risk', label: 'Critical Risk', count: portal.myFindings.filter((f) => f.exposureRiskRating === 'Critical').length },
+    { id: 'high-risk', label: 'High Risk', count: portal.myFindings.filter((f) => f.exposureRiskRating === 'High').length },
+    { id: 'active-exploit', label: 'Active Exploit', count: portal.myFindings.filter((f) => (f.threatIntelligence as { activeExploitation?: boolean } | null)?.activeExploitation).length },
   ];
 
   return (
@@ -125,6 +141,19 @@ export default function MyActionsPage() {
         ))}
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <span className="text-sm text-surface-500">Filter by risk:</span>
+        <select className="input w-48" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
+          <option value="">All risk ratings</option>
+          <option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+          <option value="overdue">Overdue</option>
+          <option value="critical-service">Critical service</option>
+        </select>
+      </div>
+
       <h2 className="mb-4 font-display text-lg font-semibold">My Open Tasks</h2>
 
       <div className="card overflow-hidden p-0">
@@ -132,7 +161,7 @@ export default function MyActionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 dark:border-surface-800 dark:bg-surface-800/50">
-                {['Finding ID', 'Title', 'Service', 'Severity', 'Status', 'Due Date', 'Days Remaining', 'Next Action', ''].map((h) => (
+                {['Finding ID', 'Title', 'Service', 'Risk', 'Severity', 'Status', 'Due Date', 'Days Remaining', 'Next Action', ''].map((h) => (
                   <th key={h || 'action'} className="px-4 py-3 text-left text-xs font-medium uppercase text-surface-500">{h}</th>
                 ))}
               </tr>
@@ -152,6 +181,9 @@ export default function MyActionsPage() {
                     </td>
                     <td className="max-w-[200px] truncate px-4 py-3">{finding.title as string}</td>
                     <td className="px-4 py-3 text-xs">{service?.name || '—'}</td>
+                    <td className="px-4 py-3">
+                      <RiskRatingBadge rating={finding.exposureRiskRating as string} score={finding.exposureRiskScore as number} />
+                    </td>
                     <td className="px-4 py-3">
                       <span className={cn('badge', finding.severity === 'CRITICAL' ? 'bg-red-500/15 text-red-400' : finding.severity === 'HIGH' ? 'bg-orange-500/15 text-orange-400' : 'bg-surface-500/15 text-surface-400')}>
                         {finding.severity as string}

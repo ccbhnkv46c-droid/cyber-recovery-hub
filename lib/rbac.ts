@@ -37,17 +37,19 @@ export type Permission =
   | 'view_assets'
   | 'view_threat_intel'
   | 'manage_threat_intel'
+  | 'view_risk_prioritisation'
+  | 'export_risk_queue'
   | 'import'
   | 'email_outbox'
   | 'all';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  SECURITY_ANALYST: ['view_all', 'view_threat_intel', 'update', 'escalate', 'report', 'dashboard', 'comment'],
-  SME: ['view_assigned', 'view_assets', 'view_threat_intel', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'comment', 'dashboard'],
-  ENGINEER: ['view_assigned', 'view_assets', 'view_threat_intel', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'request_exception', 'comment', 'dashboard'],
-  TEAM_LEADER: ['view_team', 'approve_extension', 'review_overdue', 'comment', 'team_performance', 'dashboard'],
-  ENGINEERING_MANAGER: ['view_org', 'sla_performance', 'review_escalations', 'approve_exceptions', 'dashboard', 'comment'],
-  CISO: ['enterprise_dashboard', 'risk_heatmap', 'trends', 'overdue', 'org_performance', 'view_all', 'view_threat_intel', 'dashboard', 'report'],
+  SECURITY_ANALYST: ['view_all', 'view_threat_intel', 'view_risk_prioritisation', 'update', 'escalate', 'report', 'dashboard', 'comment'],
+  SME: ['view_assigned', 'view_assets', 'view_threat_intel', 'view_risk_prioritisation', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'comment', 'dashboard'],
+  ENGINEER: ['view_assigned', 'view_assets', 'view_threat_intel', 'view_risk_prioritisation', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'request_exception', 'comment', 'dashboard'],
+  TEAM_LEADER: ['view_team', 'view_risk_prioritisation', 'approve_extension', 'review_overdue', 'comment', 'team_performance', 'dashboard'],
+  ENGINEERING_MANAGER: ['view_org', 'view_risk_prioritisation', 'sla_performance', 'review_escalations', 'approve_exceptions', 'dashboard', 'comment'],
+  CISO: ['enterprise_dashboard', 'risk_heatmap', 'trends', 'overdue', 'org_performance', 'view_all', 'view_threat_intel', 'view_risk_prioritisation', 'dashboard', 'report'],
   BOARD: ['board_dashboard'],
   ADMIN: ['all'],
 };
@@ -108,6 +110,7 @@ export function canAccessRoute(role: string, path: string): boolean {
     '/services': ['manage_services', 'view_all'],
     '/assets': ['manage_assets', 'view_assets', 'view_all'],
     '/threat-intelligence': ['manage_threat_intel', 'view_threat_intel', 'view_all'],
+    '/risk-prioritisation': ['view_risk_prioritisation', 'view_all', 'view_assigned'],
     '/import': ['import', 'create'],
   };
 
@@ -132,6 +135,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/services', label: 'Services', icon: 'Server', section: 'Operations' },
   { href: '/assets', label: 'Asset Register', icon: 'HardDrive', section: 'Operations' },
   { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar', section: 'Operations' },
+  { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge', section: 'Operations' },
   { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle', section: 'Operations' },
   { href: '/approvals', label: 'Approvals', icon: 'CheckSquare', section: 'Operations' },
   { href: '/analytics', label: 'Reports', icon: 'BarChart3', section: 'Insights' },
@@ -149,6 +153,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
   ],
   SME: [
     { href: '/my-actions', label: 'My Dashboard', icon: 'UserCheck' },
+    { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge' },
     { href: '/assets', label: 'My Assets', icon: 'HardDrive' },
     { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
@@ -156,6 +161,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
   ],
   ENGINEER: [
     { href: '/my-actions', label: 'My Dashboard', icon: 'UserCheck' },
+    { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge' },
     { href: '/assets', label: 'My Assets', icon: 'HardDrive' },
     { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
@@ -165,6 +171,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard', label: 'Executive Dashboard', icon: 'LayoutDashboard' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
+    { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge' },
     { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/approvals', label: 'Approvals', icon: 'CheckSquare' },
@@ -176,6 +183,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard', label: 'CISO Dashboard', icon: 'LayoutDashboard' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
+    { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge' },
     { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/analytics', label: 'Reports', icon: 'BarChart3' },
@@ -186,6 +194,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard', label: 'Manager Dashboard', icon: 'LayoutDashboard' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
+    { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge' },
     { href: '/approvals', label: 'Approvals', icon: 'CheckSquare' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/settings', label: 'Settings', icon: 'Settings' },
@@ -194,6 +203,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard', label: 'Manager Dashboard', icon: 'LayoutDashboard' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
+    { href: '/risk-prioritisation', label: 'Risk Prioritisation', icon: 'Gauge' },
     { href: '/approvals', label: 'Approvals', icon: 'CheckSquare' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/analytics', label: 'Reports', icon: 'BarChart3' },
@@ -255,4 +265,4 @@ export function canViewAuditTrail(role: string): boolean {
   return role === 'ADMIN' || hasPermission(role, 'view_all');
 }
 
-export const APP_VERSION = '1.2.1';
+export const APP_VERSION = '1.3.0';

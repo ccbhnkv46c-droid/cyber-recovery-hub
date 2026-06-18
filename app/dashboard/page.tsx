@@ -14,7 +14,7 @@ import { BRAND } from '@/lib/branding';
 import { Logo } from '@/components/branding/Logo';
 import {
   AlertTriangle, Shield, Clock, TrendingDown, CheckCircle, Target, Timer, Activity,
-  HardDrive, Globe, Server, Radar, ShieldAlert,
+  HardDrive, Globe, Server, Radar, ShieldAlert, Gauge,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -57,6 +57,20 @@ interface ThreatIntelMetrics {
   internetFacingAssetsWithActiveThreatIntel: number;
 }
 
+interface RiskExposureMetrics {
+  criticalRiskFindings: number;
+  highRiskFindings: number;
+  averageRiskScore: number;
+  topExposedService: { name: string; maxScore: number; avgScore: number } | null;
+  highestRiskAsset: { name: string; maxScore: number; avgScore: number } | null;
+  threatDrivenCriticalRisks: number;
+  overdueCriticalRisks: number;
+  riskByService: { name: string; avgScore: number; maxScore: number; count: number }[];
+  riskByAssetCriticality: { name: string; avgScore: number; count: number }[];
+  riskBySme: { name: string; avgScore: number; count: number }[];
+  openRiskVsClosed: { openAvgScore: number; openCount: number; closedCount: number; openCritical: number; openHigh: number };
+}
+
 interface EnhancedAnalytics {
   openVsClosedTrend: { month: string; open: number; closed: number }[];
   bySeverity: { name: string; value: number }[];
@@ -78,6 +92,7 @@ export default function DashboardPage() {
   const [enhanced, setEnhanced] = useState<EnhancedAnalytics | null>(null);
   const [assetExposure, setAssetExposure] = useState<AssetExposure | null>(null);
   const [threatMetrics, setThreatMetrics] = useState<ThreatIntelMetrics | null>(null);
+  const [riskMetrics, setRiskMetrics] = useState<RiskExposureMetrics | null>(null);
   const [cisoData, setCisoData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState('');
@@ -92,6 +107,7 @@ export default function DashboardPage() {
       apiFetch<EnhancedAnalytics>('/dashboard/analytics-enhanced'),
       apiFetch<AssetExposure>('/dashboard/asset-exposure'),
       apiFetch<ThreatIntelMetrics>('/dashboard/threat-intelligence'),
+      apiFetch<RiskExposureMetrics>('/dashboard/risk-exposure'),
     ];
     if (isCiso) requests.push(apiFetch('/dashboard/ciso'));
     if (isManager) requests.push(apiFetch('/dashboard/manager'));
@@ -105,9 +121,10 @@ export default function DashboardPage() {
       setEnhanced(enhancedResult);
       setAssetExposure(results[3] as AssetExposure);
       setThreatMetrics(results[4] as ThreatIntelMetrics);
+      setRiskMetrics(results[5] as RiskExposureMetrics);
       setLastUpdated(new Date(enhancedResult.updatedAt).toLocaleTimeString());
-      if (isCiso && results[5]) setCisoData(results[5] as Record<string, unknown>);
-      if (isManager) setCisoData((results[isCiso ? 6 : 5] as Record<string, unknown>) || null);
+      if (isCiso && results[6]) setCisoData(results[6] as Record<string, unknown>);
+      if (isManager) setCisoData((results[isCiso ? 7 : 6] as Record<string, unknown>) || null);
     } catch (e) {
       console.error(e);
     } finally {
@@ -268,6 +285,71 @@ export default function DashboardPage() {
             subtitle="Externally exposed with active intel"
           />
         </div>
+      )}
+
+      {riskMetrics && (
+        <>
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard title="Critical Risk Findings" value={riskMetrics.criticalRiskFindings} icon={AlertTriangle} color="red" />
+            <MetricCard title="High Risk Findings" value={riskMetrics.highRiskFindings} icon={Shield} color="orange" />
+            <MetricCard title="Average Risk Score" value={riskMetrics.averageRiskScore} icon={Gauge} color="brand" subtitle="Across open findings" />
+            <MetricCard
+              title="Top Exposed Service"
+              value={riskMetrics.topExposedService?.name || '—'}
+              icon={Server}
+              color="red"
+              subtitle={riskMetrics.topExposedService ? `Max score ${riskMetrics.topExposedService.maxScore}` : undefined}
+            />
+          </div>
+          <div className="mb-8 grid gap-4 sm:grid-cols-3">
+            <MetricCard
+              title="Highest Risk Asset"
+              value={riskMetrics.highestRiskAsset?.name || '—'}
+              icon={HardDrive}
+              color="orange"
+              subtitle={riskMetrics.highestRiskAsset ? `Max score ${riskMetrics.highestRiskAsset.maxScore}` : undefined}
+            />
+            <MetricCard title="Threat-Driven Critical Risks" value={riskMetrics.threatDrivenCriticalRisks} icon={Radar} color="purple" />
+            <MetricCard title="Overdue Critical Risks" value={riskMetrics.overdueCriticalRisks} icon={Clock} color="red" />
+          </div>
+          <div className="mb-8 grid gap-6 lg:grid-cols-2">
+            <div className="card">
+              <h3 className="mb-4 font-display text-lg font-semibold">Risk by Service</h3>
+              <BarChartWidget
+                data={riskMetrics.riskByService.map((s) => ({ name: s.name.split(' ')[0], value: s.avgScore }))}
+                color="#dc2626"
+              />
+            </div>
+            <div className="card">
+              <h3 className="mb-4 font-display text-lg font-semibold">Risk by Asset Criticality</h3>
+              <BarChartWidget
+                data={riskMetrics.riskByAssetCriticality.map((c) => ({ name: c.name, value: c.avgScore }))}
+                color="#ea580c"
+              />
+            </div>
+            <div className="card">
+              <h3 className="mb-4 font-display text-lg font-semibold">Risk by SME</h3>
+              <BarChartWidget
+                data={riskMetrics.riskBySme.map((s) => ({ name: s.name.split(' ')[0], value: s.avgScore }))}
+                color="#1a82f5"
+              />
+            </div>
+            <div className="card">
+              <h3 className="mb-4 font-display text-lg font-semibold">Open Risk vs Closed</h3>
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="rounded-lg bg-red-500/10 p-4">
+                  <p className="text-2xl font-bold text-red-500">{riskMetrics.openRiskVsClosed.openCount}</p>
+                  <p className="text-xs text-surface-500">Open (avg {riskMetrics.openRiskVsClosed.openAvgScore})</p>
+                  <p className="mt-1 text-xs">{riskMetrics.openRiskVsClosed.openCritical} critical · {riskMetrics.openRiskVsClosed.openHigh} high</p>
+                </div>
+                <div className="rounded-lg bg-green-500/10 p-4">
+                  <p className="text-2xl font-bold text-green-500">{riskMetrics.openRiskVsClosed.closedCount}</p>
+                  <p className="text-xs text-surface-500">Closed findings</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">

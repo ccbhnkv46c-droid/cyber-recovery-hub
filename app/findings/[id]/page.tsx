@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
 import {
   PageHeader, LoadingSpinner, SeverityBadge, StatusBadge, MetricCard,
-  ThreatPriorityBadge, ThreatIntelBadge,
+  ThreatPriorityBadge, ThreatIntelBadge, RiskRatingBadge,
 } from '@/components/ui';
 import { apiFetch, useAuthStore } from '@/lib/store';
 import { formatDate, formatDateTime, slaStatusColor, escalationLabel, cn } from '@/lib/utils';
@@ -203,6 +203,11 @@ export default function FindingDetailPage() {
   } | null;
   const threatPriority = f.threatPriority as string | null;
   const hasThreatMatch = f.hasThreatMatch as boolean;
+  const exposureRiskScore = f.exposureRiskScore as number | undefined;
+  const exposureRiskRating = f.exposureRiskRating as string | undefined;
+  const exposureRiskReason = f.exposureRiskReason as string | undefined;
+  const riskContributingFactors = (f.riskContributingFactors as string[]) || [];
+  const recommendedPriority = f.recommendedPriority as string | undefined;
   const activities = (f.activities as { id: string; type: string; content: string; createdAt: string; user: { name: string; role: string } | null }[]) || [];
   const discussion = (f.comments as { id: string; content: string; type: string; user: { name: string; role: string }; createdAt: string }[]) || [];
 
@@ -244,12 +249,13 @@ export default function FindingDetailPage() {
         </span>
         <ThreatIntelBadge matched={hasThreatMatch} />
         <ThreatPriorityBadge priority={threatPriority} />
+        {exposureRiskRating && <RiskRatingBadge rating={exposureRiskRating} score={exposureRiskScore} />}
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard title="Exposure Risk Score" value={exposureRiskScore ?? '—'} icon={Shield} color="red" />
+        <MetricCard title="Risk Rating" value={exposureRiskRating ?? '—'} icon={AlertTriangle} color="orange" />
         <MetricCard title="CVSS Score" value={(f.cvssScore as number).toFixed(1)} icon={Shield} />
-        <MetricCard title="Recover Score" value={Math.round(f.recoveryScore as number)} icon={AlertTriangle} color="red" />
-        <MetricCard title="Risk Level" value={f.riskLevel as string} icon={Shield} color="orange" />
         <MetricCard title="Target Date" value={formatDate(f.targetDate as string)} icon={Clock} />
       </div>
 
@@ -330,6 +336,54 @@ export default function FindingDetailPage() {
                   </div>
                 ))}
               </dl>
+            </div>
+            <div className="card border-red-500/20 bg-red-500/5">
+              <h3 className="mb-4 font-semibold">Risk Assessment</h3>
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <RiskRatingBadge rating={exposureRiskRating} score={exposureRiskScore} />
+                {recommendedPriority && (
+                  <span className="badge border border-brand-500/30 bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                    {recommendedPriority}
+                  </span>
+                )}
+              </div>
+              {exposureRiskReason && (
+                <p className="mb-4 text-sm leading-relaxed text-surface-600 dark:text-surface-400">{exposureRiskReason}</p>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase text-surface-500">Contributing Factors</p>
+                  <ul className="space-y-1 text-sm">
+                    {riskContributingFactors.map((factor) => (
+                      <li key={factor} className="text-surface-600 dark:text-surface-400">• {factor}</li>
+                    ))}
+                  </ul>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-surface-500">SLA Status</dt>
+                    <dd className={cn('font-medium', slaStatusColor(f.slaStatus as string))}>{f.slaStatus as string}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-surface-500">Threat Intelligence Impact</dt>
+                    <dd className="font-medium">{hasThreatMatch ? threatPriority || 'Matched' : 'No match'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-surface-500">Asset Exposure Impact</dt>
+                    <dd className="font-medium">
+                      {assetRecord?.internetFacing ? 'Internet-facing' : 'Internal'}
+                      {assetRecord?.businessCriticality ? ` · ${assetRecord.businessCriticality}` : ''}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-surface-500">Business Impact</dt>
+                    <dd className="font-medium">
+                      {assetRecord?.criticalService ? 'Critical service' : 'Standard'}
+                      {assetRecord?.environment === 'PRODUCTION' ? ' · Production' : ''}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
             {threatIntelligence && (
               <div className="card border-purple-500/20 bg-purple-500/5">
