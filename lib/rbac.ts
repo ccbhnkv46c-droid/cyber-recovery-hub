@@ -42,29 +42,41 @@ export type Permission =
   | 'all';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  SECURITY_ANALYST: ['view_all', 'update', 'escalate', 'report', 'dashboard', 'comment'],
+  SECURITY_ANALYST: ['view_all', 'view_threat_intel', 'update', 'escalate', 'report', 'dashboard', 'comment'],
   SME: ['view_assigned', 'view_assets', 'view_threat_intel', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'comment', 'dashboard'],
   ENGINEER: ['view_assigned', 'view_assets', 'view_threat_intel', 'update_progress', 'upload_evidence', 'record_blocker', 'change_status', 'request_exception', 'comment', 'dashboard'],
   TEAM_LEADER: ['view_team', 'approve_extension', 'review_overdue', 'comment', 'team_performance', 'dashboard'],
   ENGINEERING_MANAGER: ['view_org', 'sla_performance', 'review_escalations', 'approve_exceptions', 'dashboard', 'comment'],
-  CISO: ['enterprise_dashboard', 'risk_heatmap', 'trends', 'overdue', 'org_performance', 'view_all', 'dashboard', 'report'],
+  CISO: ['enterprise_dashboard', 'risk_heatmap', 'trends', 'overdue', 'org_performance', 'view_all', 'view_threat_intel', 'dashboard', 'report'],
   BOARD: ['board_dashboard'],
   ADMIN: ['all'],
 };
 
+export function normalizeRole(role: string): string {
+  if (!role) return role;
+  const upper = role.trim().toUpperCase().replace(/\s+/g, '_');
+  const aliases: Record<string, string> = {
+    ADMINISTRATOR: 'ADMIN',
+  };
+  return aliases[upper] || upper;
+}
+
 export function hasPermission(role: string, permission: Permission): boolean {
-  const perms = ROLE_PERMISSIONS[role as UserRole];
+  const normalized = normalizeRole(role);
+  const perms = ROLE_PERMISSIONS[normalized as UserRole];
   if (!perms) return false;
   return perms.includes('all') || perms.includes(permission);
 }
 
 export function getPermissionsForRole(role: string): Permission[] {
-  if (role === 'ADMIN') return ['all'];
-  return ROLE_PERMISSIONS[role as UserRole] || [];
+  const normalized = normalizeRole(role);
+  if (normalized === 'ADMIN') return ['all'];
+  return ROLE_PERMISSIONS[normalized as UserRole] || [];
 }
 
 export function isAssignedOnlyRole(role: string): boolean {
-  return role === 'SME' || role === 'ENGINEER';
+  const normalized = normalizeRole(role);
+  return normalized === 'SME' || normalized === 'ENGINEER';
 }
 
 export function canAssignWork(role: string): boolean {
@@ -76,7 +88,8 @@ export function canDeleteFinding(role: string): boolean {
 }
 
 export function canAccessRoute(role: string, path: string): boolean {
-  if (role === 'ADMIN') return true;
+  const normalized = normalizeRole(role);
+  if (normalized === 'ADMIN') return true;
 
   const routePermissions: Record<string, Permission[]> = {
     '/dashboard': ['dashboard', 'enterprise_dashboard', 'board_dashboard'],
@@ -101,7 +114,7 @@ export function canAccessRoute(role: string, path: string): boolean {
   const base = '/' + (path.split('/').filter(Boolean)[0] || '');
   const required = routePermissions[base];
   if (!required) return true;
-  return required.some((p) => hasPermission(role, p));
+  return required.some((p) => hasPermission(normalized, p));
 }
 
 export interface NavItem {
@@ -152,6 +165,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard', label: 'Executive Dashboard', icon: 'LayoutDashboard' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
+    { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/approvals', label: 'Approvals', icon: 'CheckSquare' },
     { href: '/analytics', label: 'Reports', icon: 'BarChart3' },
@@ -162,6 +176,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard', label: 'CISO Dashboard', icon: 'LayoutDashboard' },
     { href: '/completed-tasks', label: 'Completed Tasks', icon: 'CheckCircle' },
     { href: '/register', label: 'Vulnerability Register', icon: 'List' },
+    { href: '/threat-intelligence', label: 'Threat Intelligence', icon: 'Radar' },
     { href: '/escalations', label: 'Escalations', icon: 'AlertTriangle' },
     { href: '/analytics', label: 'Reports', icon: 'BarChart3' },
     { href: '/copilot', label: 'Recover Copilot', icon: 'Bot' },
@@ -186,9 +201,28 @@ const ROLE_NAV: Record<string, NavItem[]> = {
   ],
 };
 
+const THREAT_INTEL_NAV: NavItem = {
+  href: '/threat-intelligence',
+  label: 'Threat Intelligence',
+  icon: 'Radar',
+  section: 'Operations',
+};
+
+function withThreatIntelNav(items: NavItem[], role: string): NavItem[] {
+  if (!canAccessRoute(role, '/threat-intelligence')) return items;
+  if (items.some((i) => i.href === '/threat-intelligence')) return items;
+  const copy = [...items];
+  const anchorIdx = copy.findIndex((i) => i.href === '/assets' || i.href === '/my-actions' || i.href === '/register');
+  const insertIdx = anchorIdx >= 0 ? anchorIdx + 1 : copy.length;
+  const section = copy[anchorIdx]?.section;
+  copy.splice(insertIdx, 0, { ...THREAT_INTEL_NAV, ...(section ? { section } : {}) });
+  return copy;
+}
+
 export function getNavForRole(role: string): NavItem[] {
-  if (role === 'ADMIN') return ADMIN_NAV;
-  return ROLE_NAV[role] || [];
+  const normalized = normalizeRole(role);
+  const base = normalized === 'ADMIN' ? ADMIN_NAV : ROLE_NAV[normalized] || [];
+  return withThreatIntelNav(base, normalized);
 }
 
 export function getDefaultRoute(role: string): string {
@@ -221,4 +255,4 @@ export function canViewAuditTrail(role: string): boolean {
   return role === 'ADMIN' || hasPermission(role, 'view_all');
 }
 
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.2.1';

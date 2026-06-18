@@ -69,8 +69,15 @@ describe('RBAC', () => {
     expect(canAccessRoute('ADMIN', '/register')).toBe(true);
     expect(canAccessRoute('ADMIN', '/import')).toBe(true);
     expect(canAccessRoute('ADMIN', '/services')).toBe(true);
+    expect(canAccessRoute('ADMIN', '/threat-intelligence')).toBe(true);
     expect(canAccessRoute('ADMIN', '/admin')).toBe(true);
     expect(canAccessRoute('ADMIN', '/admin/email-outbox')).toBe(true);
+  });
+
+  it('allows SME read-only access to threat intelligence', () => {
+    expect(canAccessRoute('SME', '/threat-intelligence')).toBe(true);
+    expect(hasPermission('SME', 'view_threat_intel')).toBe(true);
+    expect(hasPermission('SME', 'manage_threat_intel')).toBe(false);
   });
 
   it('returns full admin navigation', () => {
@@ -78,6 +85,7 @@ describe('RBAC', () => {
     expect(adminNav.length).toBeGreaterThanOrEqual(10);
     expect(adminNav.some((n) => n.href === '/import')).toBe(true);
     expect(adminNav.some((n) => n.href === '/services')).toBe(true);
+    expect(adminNav.some((n) => n.href === '/threat-intelligence')).toBe(true);
     expect(adminNav.some((n) => n.href === '/admin/email-outbox')).toBe(true);
     expect(adminNav.some((n) => n.href === '/dashboard')).toBe(true);
   });
@@ -85,6 +93,7 @@ describe('RBAC', () => {
   it('returns role-appropriate nav items for SME', () => {
     const smeNav = getNavForRole('SME');
     expect(smeNav.some((n) => n.href === '/my-actions')).toBe(true);
+    expect(smeNav.some((n) => n.href === '/threat-intelligence')).toBe(true);
     expect(smeNav.some((n) => n.href === '/register')).toBe(false);
     expect(smeNav.some((n) => n.href === '/import')).toBe(false);
   });
